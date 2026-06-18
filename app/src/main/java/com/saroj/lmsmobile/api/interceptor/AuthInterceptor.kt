@@ -33,6 +33,12 @@ class AuthInterceptor(private val tokenManager: TokenManager) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
+        val requestUrl = originalRequest.url.toString()
+
+        // Don't add token to login request
+        if (requestUrl.contains(Constants.Endpoints.LOGIN)) {
+            return chain.proceed(originalRequest)
+        }
 
         // Get token from DataStore (blocking because OkHttp is synchronous)
         val token = runBlocking {

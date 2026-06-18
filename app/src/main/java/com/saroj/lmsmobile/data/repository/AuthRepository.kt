@@ -43,7 +43,7 @@ class AuthRepository(
      * 1. Emit Loading state
      * 2. Call API with credentials
      * 3. On success: Save token and user info, emit Success
-     * 4. On 401: Emit Unauthorized
+     * 4. On 401: Emit Error with "Invalid credentials"
      * 5. On error: Emit Error
      *
      * @param email User email
@@ -55,9 +55,11 @@ class AuthRepository(
 
         try {
             val response = apiService.login(LoginRequest(email, password))
+            android.util.Log.d("AuthRepository", "Login response code: ${response.code()}")
 
             if (response.isSuccessful) {
                 val loginResponse = response.body()
+                android.util.Log.d("AuthRepository", "Login successful: $loginResponse")
                 if (loginResponse != null) {
                     // Save token and user info to DataStore
                     tokenManager.saveToken(loginResponse.access_token)
@@ -72,21 +74,28 @@ class AuthRepository(
                     emit(NetworkResult.Error("Empty response from server", response.code()))
                 }
             } else {
+                val errorBody = response.errorBody()?.string()
+                android.util.Log.e("AuthRepository", "Login failed: $errorBody")
                 when (response.code()) {
-                    Constants.HTTP_UNAUTHORIZED -> emit(NetworkResult.Unauthorized())
+                    Constants.HTTP_UNAUTHORIZED -> {
+                        // For login, 401 means invalid credentials, not session expired
+                        emit(NetworkResult.Error("Invalid email or password", response.code()))
+                    }
                     Constants.HTTP_UNPROCESSABLE_ENTITY -> {
-                        emit(NetworkResult.Error("Invalid credentials", response.code()))
+                        emit(NetworkResult.Error("Please check your email and password", response.code()))
                     }
                     else -> emit(NetworkResult.Error(
-                        response.message() ?: Constants.ERROR_UNKNOWN,
+                        "Server error: ${response.code()}",
                         response.code()
                     ))
                 }
             }
         } catch (e: Exception) {
+            android.util.Log.e("AuthRepository", "Login exception: ${e.message}")
             emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
         }
     }.catch { e ->
+        android.util.Log.e("AuthRepository", "Login catch: ${e.message}")
         emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
     }
 

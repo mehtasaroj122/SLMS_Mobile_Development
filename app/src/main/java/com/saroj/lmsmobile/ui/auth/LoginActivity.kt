@@ -151,14 +151,17 @@ class LoginActivity : AppCompatActivity() {
                 }
                 is NetworkResult.Success -> {
                     showLoadingState(false)
+                    android.util.Log.d("LoginActivity", "Login successful, role: ${result.data.user.role}")
                     navigateToDashboard(result.data.user.role)
                 }
                 is NetworkResult.Error -> {
                     showLoadingState(false)
+                    android.util.Log.e("LoginActivity", "Login error: ${result.message}")
                     showErrorDialog(result.message)
                 }
                 is NetworkResult.Unauthorized -> {
                     showLoadingState(false)
+                    android.util.Log.e("LoginActivity", "Login unauthorized - session expired")
                     showErrorDialog(Constants.ERROR_UNAUTHORIZED)
                 }
             }
@@ -224,12 +227,23 @@ class LoginActivity : AppCompatActivity() {
      * @param userRole The role of the logged-in user (admin, staff, student)
      */
     private fun navigateToDashboard(userRole: String) {
+        android.util.Log.d("LoginActivity", "Navigating to dashboard for role: $userRole")
         val intent = when (userRole) {
-            Constants.ROLE_ADMIN -> Intent(this, AdminDashboardActivity::class.java)
-            Constants.ROLE_STAFF -> Intent(this, StaffDashboardActivity::class.java)
-            Constants.ROLE_STUDENT -> Intent(this, StudentDashboardActivity::class.java)
+            Constants.ROLE_ADMIN -> {
+                android.util.Log.d("LoginActivity", "Target activity: AdminDashboardActivity")
+                Intent(this, AdminDashboardActivity::class.java)
+            }
+            Constants.ROLE_STAFF -> {
+                android.util.Log.d("LoginActivity", "Target activity: StaffDashboardActivity")
+                Intent(this, StaffDashboardActivity::class.java)
+            }
+            Constants.ROLE_STUDENT -> {
+                android.util.Log.d("LoginActivity", "Target activity: StudentDashboardActivity")
+                Intent(this, StudentDashboardActivity::class.java)
+            }
             else -> {
-                showErrorDialog("Unknown user role")
+                android.util.Log.e("LoginActivity", "Unknown user role: $userRole")
+                showErrorDialog("Unknown user role: $userRole")
                 return
             }
         }

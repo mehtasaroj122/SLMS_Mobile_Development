@@ -1,5 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!-- Primary Colors -->
+    <color name="primary_color">#2196F3</color>
+    <color name="primary_dark">#1976D2</color>
+    <color name="primary_light">#E3F2FD</color>
+
+    <!-- Accent Colors -->
+    <color name="accent_color">#FF5722</color>
+    <color name="accent_light">#FFEBEE</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+    <color name="text_hint">#BDBDBD</color>
+
+    <!-- Background Colors -->
+    <color name="background_primary">#FFFFFF</color>
+    <color name="background_secondary">#F5F5F5</color>
+
+    <!-- Status Colors -->
+    <color name="success_color">#4CAF50</color>
+    <color name="error_color">#F44336</color>
+    <color name="warning_color">#FFC107</color>
+    <color name="info_color">#2196F3</color>
+
+    <!-- Utility Colors -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="transparent">#00000000</color>
+    <color name="divider">#EEEEEE</color>
+    <color name="overlay">#80000000</color>
+
+    <!-- Role-based Colors -->
+    <color name="admin_color">#E91E63</color>
+    <color name="staff_color">#FF9800</color>
+    <color name="student_color">#2196F3</color>
+
+    <!-- Status Indicator Colors -->
+    <color name="status_active">#4CAF50</color>
+    <color name="status_pending">#FFC107</color>
+    <color name="status_inactive">#9E9E9E</color>
+    <color name="status_overdue">#F44336</color>
+
 </resources>

@@ -49,6 +49,7 @@ class UnauthorizedActivity : AppCompatActivity() {
         }
     }
 
+    @Suppress("DEPRECATION")
     override fun onBackPressed() {
         // Prevent going back
         // Force user to login again

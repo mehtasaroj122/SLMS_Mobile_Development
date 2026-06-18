@@ -53,16 +53,6 @@
             android:name=".ui.student.StudentDashboardActivity"
             android:exported="false" />
 
-        <!-- Common Activities -->
-        <activity
-            android:name=".ui.common.BookDetailActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.common.StudentDetailActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.common.ProfileActivity"
-            android:exported="false" />
 
     </application>
 

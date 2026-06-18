@@ -12,6 +12,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
 
 /**
  * BaseActivity is a base class for all Activities in the application.
@@ -36,8 +37,8 @@ abstract class BaseActivity : AppCompatActivity() {
     protected lateinit var tokenManager: TokenManager
     protected val activityScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-    override fun onCreate(android.os.Bundle?) {
-        super.onCreate(android.os.Bundle())
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
         // Initialize TokenManager for child classes
         tokenManager = (application as MainApplication).tokenManager
     }
@@ -82,8 +83,4 @@ abstract class BaseActivity : AppCompatActivity() {
     }
 }
 
-// Cancel coroutine scope on destroy
-fun CoroutineScope.cancel() {
-    coroutineContext.cancel()
-}
 

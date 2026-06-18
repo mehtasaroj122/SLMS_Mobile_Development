@@ -10,6 +10,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.saroj.lmsmobile.utils.Constants
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.firstOrNull
 
 /**
  * TokenManager handles all token and session storage using DataStore Preferences.
@@ -68,8 +69,7 @@ class TokenManager(private val context: Context) {
      * Use this in repositories for single-shot access.
      */
     suspend fun getTokenSync(): String? {
-        val preferences = dataStore.data.map { it[PrefsKeys.TOKEN] }
-        return preferences.map { it }.collector()
+        return dataStore.data.map { it[PrefsKeys.TOKEN] }.firstOrNull()
     }
 
     /**
@@ -142,7 +142,7 @@ class TokenManager(private val context: Context) {
     suspend fun getUserRoleSync(): String? {
         return dataStore.data.map { preferences ->
             preferences[PrefsKeys.USER_ROLE]
-        }.collector()
+        }.firstOrNull()
     }
 
     // ==================== Cleanup Operations ====================
@@ -168,15 +168,4 @@ class TokenManager(private val context: Context) {
     }
 }
 
-/**
- * Helper collector function for Flow<T>.
- * This is a workaround for single-shot value extraction from Flow.
- */
-private suspend fun <T> Flow<T>.collector(): T? {
-    var result: T? = null
-    this.collect { value ->
-        result = value
-    }
-    return result
-}
 

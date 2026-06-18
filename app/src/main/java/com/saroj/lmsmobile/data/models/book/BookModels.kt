@@ -14,10 +14,10 @@ data class Book(
     val publisher: String? = null,
     val edition: String? = null,
     val category: String? = null,
-    @SerializedName("total_copies")
-    val totalCopies: Int? = 0,
-    @SerializedName("available_copies")
-    val availableCopies: Int? = 0,
+    @SerializedName(value = "quantity", alternate = ["total_copies"])
+    val quantity: Int? = 0,
+    @SerializedName(value = "available_quantity", alternate = ["available_copies"])
+    val available_quantity: Int? = 0,
     val description: String? = null,
     @SerializedName("publication_year")
     val publicationYear: Int? = null,
@@ -26,7 +26,13 @@ data class Book(
     val createdAt: String? = null,
     @SerializedName("updated_at")
     val updatedAt: String? = null
-) : Serializable
+) : Serializable {
+    val totalCopies: Int?
+        get() = quantity
+
+    val availableCopies: Int?
+        get() = available_quantity
+}
 
 /**
  * BookResponse wraps book data from API.

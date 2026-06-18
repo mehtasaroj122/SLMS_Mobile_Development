@@ -1,7 +1,5 @@
 package com.saroj.lmsmobile.data.models.common
 
-import com.google.gson.annotations.SerializedName
-
 /**
  * ErrorResponse represents API error responses.
  * Used for handling error messages from Laravel API.
@@ -24,20 +22,25 @@ data class ErrorResponse(
  *   }
  */
 data class PaginatedResponse<T>(
-    val data: List<T> = emptyList(),
-    val current_page: Int = 1,
-    val per_page: Int = 20,
-    val total: Int = 0,
-    val last_page: Int = 1,
-    @SerializedName("from")
-    val from: Int? = null,
-    @SerializedName("to")
-    val to: Int? = null
-) {
-    val hasNextPage: Boolean
-        get() = current_page < last_page
+    val data: List<T>,
+    val links: PaginationLinks?,
+    val meta: PaginationMeta?
+)
 
-    val hasPreviousPage: Boolean
-        get() = current_page > 1
-}
+data class PaginationLinks(
+    val first: String?,
+    val last: String?,
+    val prev: String?,
+    val next: String?
+)
+
+data class PaginationMeta(
+    val current_page: Int,
+    val from: Int?,
+    val last_page: Int,
+    val path: String?,
+    val per_page: Int,
+    val to: Int?,
+    val total: Int
+)
 

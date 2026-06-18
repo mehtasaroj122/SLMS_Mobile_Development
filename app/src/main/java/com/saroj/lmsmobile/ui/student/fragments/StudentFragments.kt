@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.saroj.lmsmobile.R
+import com.saroj.lmsmobile.ui.books.BaseBooksFragment
 
 class StudentDashboardFragment : Fragment() {
     override fun onCreateView(
@@ -15,13 +16,7 @@ class StudentDashboardFragment : Fragment() {
     ): View = inflater.inflate(R.layout.fragment_student_dashboard, container, false)
 }
 
-class StudentSearchBooksFragment : Fragment() {
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View = inflater.inflate(R.layout.fragment_student_search_books, container, false)
-}
+class StudentSearchBooksFragment : BaseBooksFragment(R.layout.fragment_student_search_books, BaseBooksFragment.Mode.SEARCH)
 
 class StudentMyBooksFragment : Fragment() {
     override fun onCreateView(

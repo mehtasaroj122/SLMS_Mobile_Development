@@ -38,6 +38,9 @@
         <activity
             android:name=".ui.common.UnauthorizedActivity"
             android:exported="false" />
+        <activity
+            android:name=".ui.books.BookDetailActivity"
+            android:exported="false" />
 
         <!-- Admin Dashboard -->
         <activity

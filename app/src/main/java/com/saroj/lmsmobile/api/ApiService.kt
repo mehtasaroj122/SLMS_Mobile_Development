@@ -70,12 +70,10 @@ interface ApiService {
     /**
      * Get all available books with pagination.
      * @param page Page number (default: 1)
-     * @param pageSize Items per page (default: 20)
      */
     @GET("books")
     suspend fun getBooks(
-        @Query("page") page: Int = 1,
-        @Query("per_page") pageSize: Int = 20
+        @Query("page") page: Int
     ): Response<PaginatedResponse<Book>>
 
     /**
@@ -90,7 +88,10 @@ interface ApiService {
      * @param query Search keyword (title, author, ISBN)
      */
     @GET("books/search")
-    suspend fun searchBooks(@Query("q") query: String): Response<PaginatedResponse<Book>>
+    suspend fun searchBooks(
+        @Query("q") query: String,
+        @Query("page") page: Int
+    ): Response<PaginatedResponse<Book>>
 
     /**
      * Get all available books (not currently issued).

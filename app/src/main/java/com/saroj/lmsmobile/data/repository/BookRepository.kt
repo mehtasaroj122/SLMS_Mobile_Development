@@ -4,6 +4,7 @@ import com.saroj.lmsmobile.api.ApiService
 import com.google.gson.Gson
 import com.saroj.lmsmobile.data.models.common.ErrorResponse
 import com.saroj.lmsmobile.data.models.book.Book
+import com.saroj.lmsmobile.data.models.book.BookRequestModel
 import com.saroj.lmsmobile.data.models.book.StudentBookRequestBody
 import com.saroj.lmsmobile.data.models.book.StudentBookRequestResponse
 import com.saroj.lmsmobile.data.models.common.NetworkResult
@@ -103,6 +104,17 @@ class BookRepository(
         } else {
             handleError(response).collect { emit(it) }
         }
+    }.catch { e ->
+        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+    }
+
+    /**
+     * Get authenticated student's requests for deriving book button state.
+     */
+    fun getStudentBookRequests(page: Int = 1): Flow<NetworkResult<PaginatedResponse<BookRequestModel>>> = flow {
+        emit(NetworkResult.Loading())
+        val response = apiService.getStudentBookRequests(page)
+        handlePaginatedResponse(response).collect { emit(it) }
     }.catch { e ->
         emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
     }

@@ -112,7 +112,13 @@ class StudentSearchBookAdapter(
                     .replace("https://localhost:8000", apiRootUrl())
             }
 
-            return apiRootUrl().trimEnd('/') + "/" + value.trimStart('/')
+            val normalizedPath = value.trimStart('/')
+            val storagePath = if (normalizedPath.startsWith("storage/", ignoreCase = true)) {
+                normalizedPath
+            } else {
+                "storage/$normalizedPath"
+            }
+            return apiRootUrl().trimEnd('/') + "/" + storagePath
         }
 
         private fun apiRootUrl(): String {

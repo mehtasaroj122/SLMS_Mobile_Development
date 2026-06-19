@@ -4,6 +4,7 @@ import com.saroj.lmsmobile.data.models.auth.LoginRequest
 import com.saroj.lmsmobile.data.models.auth.LoginResponse
 import com.saroj.lmsmobile.data.models.auth.ProfileResponse
 import com.saroj.lmsmobile.data.models.book.Book
+import com.saroj.lmsmobile.data.models.book.BookRequestModel
 import com.saroj.lmsmobile.data.models.book.StudentBookRequestBody
 import com.saroj.lmsmobile.data.models.book.StudentBookRequestResponse
 import com.saroj.lmsmobile.data.models.common.PaginatedResponse
@@ -103,6 +104,14 @@ interface ApiService {
     suspend fun submitStudentBookRequest(
         @Body request: StudentBookRequestBody
     ): Response<StudentBookRequestResponse>
+
+    /**
+     * Get authenticated student's book requests.
+     */
+    @GET("student/requests")
+    suspend fun getStudentBookRequests(
+        @Query("page") page: Int = 1
+    ): Response<PaginatedResponse<BookRequestModel>>
 
     /**
      * Get all available books (not currently issued).

@@ -28,6 +28,7 @@ class StudentSearchBooksViewModel(
     val totalBooks: LiveData<Int> = _totalBooks
 
     private val loadedBooks = mutableListOf<StudentSearchBookUiModel>()
+    private val studentRequestStates = mutableMapOf<Int, BookRequestState>()
     private var selectedCategory: String? = null
     private var availableOnly: Boolean = false
     private var selectedCondition: String? = null
@@ -45,6 +46,7 @@ class StudentSearchBooksViewModel(
 
         isSearching = false
         currentQuery = ""
+        refreshStudentRequestStates()
         loadPage(page = if (refresh) 1 else currentPage, append = !refresh && loadedBooks.isNotEmpty())
     }
 
@@ -62,6 +64,7 @@ class StudentSearchBooksViewModel(
             resetPagination(keepQuery = true)
             isSearching = true
             currentQuery = trimmedQuery
+            refreshStudentRequestStates()
             loadSearchPage(trimmedQuery, page = 1, append = false)
         }
     }
@@ -111,6 +114,24 @@ class StudentSearchBooksViewModel(
         selectedCondition = null
         selectedSort = SortOption.TITLE_ASC
         publishFilteredBooks()
+    }
+
+    fun refreshStudentRequestStates() {
+        viewModelScope.launch {
+            bookRepository.getStudentBookRequests(page = 1).collect { result ->
+                if (result is NetworkResult.Success) {
+                    studentRequestStates.clear()
+                    result.data.data.forEach { request ->
+                        val bookId = request.bookId ?: request.book?.id ?: return@forEach
+                        val state = request.status.toBookRequestState(availableCopies = 1)
+                        if (state != BookRequestState.NONE) {
+                            studentRequestStates[bookId] = state
+                        }
+                    }
+                    applyStudentRequestStatesToLoadedBooks()
+                }
+            }
+        }
     }
 
     fun categories(): List<String> = loadedBooks.map { it.category }.filter { it.isNotBlank() }.distinct().sorted()
@@ -208,6 +229,7 @@ class StudentSearchBooksViewModel(
     }
 
     private fun updateBookState(bookId: Int, requestState: BookRequestState) {
+        studentRequestStates[bookId] = requestState
         val updatedBooks = loadedBooks.map { book ->
             if (book.id == bookId) book.copy(requestState = requestState) else book
         }
@@ -226,6 +248,17 @@ class StudentSearchBooksViewModel(
             .sortedWith(selectedSort.comparator)
 
         _booksState.value = NetworkResult.Success(filteredBooks)
+    }
+
+    private fun applyStudentRequestStatesToLoadedBooks() {
+        if (loadedBooks.isEmpty()) return
+        val updatedBooks = loadedBooks.map { book ->
+            val requestState = studentRequestStates[book.id]
+            if (requestState != null) book.copy(requestState = requestState) else book
+        }
+        loadedBooks.clear()
+        loadedBooks.addAll(updatedBooks)
+        publishFilteredBooks()
     }
 
     private fun resetPagination(keepQuery: Boolean) {
@@ -257,7 +290,7 @@ class StudentSearchBooksViewModel(
                 if (availableCopies > 0) "available" else "unavailable"
             ),
             coverImageUrl = cover_image,
-            requestState = requestState.toBookRequestState(availableCopies)
+            requestState = studentRequestStates[id] ?: requestState.toBookRequestState(availableCopies)
         )
     }
 

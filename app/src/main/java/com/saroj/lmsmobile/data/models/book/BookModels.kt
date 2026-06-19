@@ -59,15 +59,16 @@ data class BookResponse(
  * BookRequestModel represents a book request (student request for a book).
  */
 data class BookRequestModel(
-    val id: Int,
+    val id: Int = 0,
     @SerializedName("student_id")
-    val studentId: Int,
+    val studentId: Int? = null,
     @SerializedName("book_id")
-    val bookId: Int,
-    val status: String, // pending, approved, rejected
+    val bookId: Int? = null,
+    val book: Book? = null,
+    val status: String? = null, // pending, approved, rejected
     val reason: String? = null,
-    @SerializedName("requested_at")
-    val requestedAt: String,
+    @SerializedName(value = "requested_at", alternate = ["request_date"])
+    val requestedAt: String? = null,
     @SerializedName("created_at")
     val createdAt: String? = null,
     @SerializedName("updated_at")

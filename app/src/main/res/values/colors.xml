@@ -164,4 +164,44 @@
     <color name="my_fines_blue_bg">#DBEAFE</color>
     <color name="my_fines_gray_bg">#F1F5F9</color>
 
+    <!-- Student More Bottom Sheet Colors -->
+    <color name="more_sheet_bg">#FFFFFF</color>
+    <color name="more_sheet_handle">#CBD5E1</color>
+    <color name="more_text_primary">#0F172A</color>
+    <color name="more_text_secondary">#64748B</color>
+    <color name="more_border">#E5EDF7</color>
+    <color name="more_row_bg">#F8FAFC</color>
+    <color name="more_blue">#2563EB</color>
+    <color name="more_blue_bg">#DBEAFE</color>
+    <color name="more_purple">#7C3AED</color>
+    <color name="more_purple_bg">#EDE9FE</color>
+    <color name="more_orange">#F97316</color>
+    <color name="more_orange_bg">#FFEDD5</color>
+    <color name="more_red">#EF4444</color>
+    <color name="more_red_bg">#FEE2E2</color>
+
+    <!-- Student My Requests Colors -->
+    <color name="my_requests_bg">#F4F8FF</color>
+    <color name="my_requests_card">#FFFFFF</color>
+    <color name="my_requests_primary">#2563EB</color>
+    <color name="my_requests_blue">#2563EB</color>
+    <color name="my_requests_text_primary">#0F172A</color>
+    <color name="my_requests_text_secondary">#475569</color>
+    <color name="my_requests_text_muted">#64748B</color>
+    <color name="my_requests_text_hint">#94A3B8</color>
+    <color name="my_requests_border">#E2E8F0</color>
+    <color name="my_requests_chip_border">#CBD5E1</color>
+    <color name="my_requests_card_border">#E5EDF7</color>
+    <color name="my_requests_green">#16A34A</color>
+    <color name="my_requests_green_bg">#DCFCE7</color>
+    <color name="my_requests_orange">#F97316</color>
+    <color name="my_requests_orange_dark">#EA580C</color>
+    <color name="my_requests_orange_bg">#FFEDD5</color>
+    <color name="my_requests_red">#EF4444</color>
+    <color name="my_requests_red_dark">#DC2626</color>
+    <color name="my_requests_red_bg">#FEE2E2</color>
+    <color name="my_requests_gray">#64748B</color>
+    <color name="my_requests_gray_bg">#F1F5F9</color>
+    <color name="my_requests_blue_bg">#DBEAFE</color>
+
 </resources>

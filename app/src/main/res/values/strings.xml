@@ -24,6 +24,7 @@
     <string name="nav_my_books">My Books</string>
     <string name="nav_my_fines">My Fines</string>
     <string name="nav_profile">Profile</string>
+    <string name="nav_more">More</string>
 
     <!-- Menu Strings -->
     <string name="menu_logout">Logout</string>

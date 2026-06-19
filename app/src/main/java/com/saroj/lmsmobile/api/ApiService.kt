@@ -124,6 +124,18 @@ interface ApiService {
         @Query("page") page: Int = 1
     ): Response<PaginatedResponse<BookRequestModel>>
 
+    @GET("student/requests/summary")
+    suspend fun getStudentRequestsSummary(): Response<JsonElement>
+
+    @GET("student/requests")
+    suspend fun getAuthenticatedStudentRequests(): Response<JsonElement>
+
+    @GET("student/requests/{id}")
+    suspend fun getAuthenticatedStudentRequestDetail(@Path("id") id: Int): Response<JsonElement>
+
+    @POST("student/requests/{id}/cancel")
+    suspend fun cancelAuthenticatedStudentRequest(@Path("id") id: Int): Response<JsonElement>
+
     /**
      * Get all available books (not currently issued).
      */

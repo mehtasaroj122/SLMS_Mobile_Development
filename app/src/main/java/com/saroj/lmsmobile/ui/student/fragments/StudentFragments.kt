@@ -38,6 +38,7 @@ import com.saroj.lmsmobile.data.repository.StudentDashboardRepository
 import com.saroj.lmsmobile.data.repository.StudentMyBooksRepository
 import com.saroj.lmsmobile.data.repository.StudentMyFinesRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
+import com.saroj.lmsmobile.ui.student.StudentDashboardActivity
 import com.saroj.lmsmobile.ui.student.adapter.MyFinesAdapter
 import com.saroj.lmsmobile.ui.student.adapter.MyBooksAdapter
 import com.saroj.lmsmobile.ui.student.adapter.StudentSearchBookAdapter
@@ -276,13 +277,13 @@ class StudentDashboardFragment : Fragment() {
             selectBottomNavItem(R.id.nav_my_books)
         }
         view.findViewById<View>(R.id.actionMyRequests)?.setOnClickListener {
-            Toast.makeText(requireContext(), "My Requests tab will be added soon.", Toast.LENGTH_SHORT).show()
+            (activity as? StudentDashboardActivity)?.openMyRequests()
         }
         view.findViewById<View>(R.id.actionMyFines)?.setOnClickListener {
             selectBottomNavItem(R.id.nav_my_fines)
         }
         view.findViewById<View>(R.id.actionMyProfile)?.setOnClickListener {
-            selectBottomNavItem(R.id.nav_profile)
+            Toast.makeText(requireContext(), "Profile coming soon", Toast.LENGTH_SHORT).show()
         }
         view.findViewById<View>(R.id.actionViewAllNotifications)?.setOnClickListener {
             Toast.makeText(requireContext(), "All notifications will be available soon.", Toast.LENGTH_SHORT).show()

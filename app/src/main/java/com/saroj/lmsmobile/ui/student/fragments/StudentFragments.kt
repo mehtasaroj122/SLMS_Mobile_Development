@@ -2,7 +2,10 @@ package com.saroj.lmsmobile.ui.student.fragments
 
 import android.content.Intent
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
+import android.text.InputType
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -10,9 +13,14 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.ArrayAdapter
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.widget.doAfterTextChanged
@@ -37,7 +45,9 @@ import com.saroj.lmsmobile.data.repository.BookRepository
 import com.saroj.lmsmobile.data.repository.StudentDashboardRepository
 import com.saroj.lmsmobile.data.repository.StudentMyBooksRepository
 import com.saroj.lmsmobile.data.repository.StudentMyFinesRepository
+import com.saroj.lmsmobile.data.repository.StudentProfileRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
+import com.saroj.lmsmobile.ui.auth.LoginActivity
 import com.saroj.lmsmobile.ui.student.StudentDashboardActivity
 import com.saroj.lmsmobile.ui.student.adapter.MyFinesAdapter
 import com.saroj.lmsmobile.ui.student.adapter.MyBooksAdapter
@@ -54,15 +64,20 @@ import com.saroj.lmsmobile.ui.student.model.MyBooksSortOption
 import com.saroj.lmsmobile.ui.student.model.MyBooksStatusFilter
 import com.saroj.lmsmobile.ui.student.model.MyBooksSummaryUiModel
 import com.saroj.lmsmobile.ui.student.model.MyBooksTab
+import com.saroj.lmsmobile.ui.student.model.DeleteEligibilityUiModel
+import com.saroj.lmsmobile.ui.student.model.ProfileTab
 import com.saroj.lmsmobile.ui.student.model.StudentSearchBookUiModel
+import com.saroj.lmsmobile.ui.student.model.StudentProfileUiModel
 import com.saroj.lmsmobile.ui.student.viewmodel.StudentDashboardViewModel
 import com.saroj.lmsmobile.ui.student.viewmodel.StudentMyBooksViewModel
 import com.saroj.lmsmobile.ui.student.viewmodel.StudentMyFinesViewModel
+import com.saroj.lmsmobile.ui.student.viewmodel.StudentProfileViewModel
 import com.saroj.lmsmobile.ui.student.viewmodel.StudentSearchBooksViewModel
 import com.saroj.lmsmobile.utils.Constants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -1581,10 +1596,759 @@ class StudentMyFinesFragment : Fragment() {
 }
 
 class StudentProfileFragment : Fragment() {
+    private lateinit var viewModel: StudentProfileViewModel
+    private lateinit var swipeRefreshLayout: SwipeRefreshLayout
+    private var selectedTab = ProfileTab.PROFILE
+    private var isEditMode = false
+    private var currentPasswordVisible = false
+    private var newPasswordVisible = false
+    private var confirmPasswordVisible = false
+    private var selectedPhotoFile: File? = null
+    private val genderOptions = listOf("Male", "Female", "Others")
+
+    private var profile = StudentProfileUiModel(
+        name = "Saroj Mehta",
+        email = "mehtasaroj315@gmail.com",
+        role = "Student",
+        username = "mehtasaroj315",
+        studentId = "STU-001-001",
+        department = "English Literature",
+        memberSince = "April 28, 2026",
+        lastLogin = "Jun 19, 2026 23:49",
+        phone = "+9779807006324",
+        gender = "Male",
+        address = "Kathmandu, Nepal",
+        profilePhotoUrl = null
+    )
+
+    private val deleteEligibility = DeleteEligibilityUiModel(
+        canDelete = false,
+        issuedBooks = 3,
+        pendingFines = "\u20B950",
+        activeRequests = 2,
+        reasons = listOf(
+            "Return all issued books",
+            "Clear pending fines",
+            "Resolve active requests"
+        )
+    )
+
+    private var currentDeleteEligibility = deleteEligibility
+
+    private val photoPicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        handleSelectedPhoto(uri)
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View = inflater.inflate(R.layout.fragment_student_profile, container, false)
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        swipeRefreshLayout = view.findViewById(R.id.profileSwipeRefresh)
+        setupViewModel()
+        setupHeader()
+        setupTabs()
+        setupProfileInfoSection()
+        setupPhotoSection()
+        setupSecuritySection()
+        setupDeleteSection()
+        setupPullToRefresh()
+        observeProfile()
+        setupDummyProfile()
+        switchTab(ProfileTab.PROFILE)
+        viewModel.loadInitial()
+    }
+
+    private fun setupViewModel() {
+        val tokenManager = (requireActivity().application as MainApplication).tokenManager
+        val apiService = RetrofitClient.getApiService(tokenManager)
+        val repository = StudentProfileRepository(apiService, tokenManager)
+
+        viewModel = ViewModelProvider(
+            this,
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return StudentProfileViewModel(repository) as T
+                }
+            }
+        )[StudentProfileViewModel::class.java]
+    }
+
+    private fun setupPullToRefresh() {
+        swipeRefreshLayout.setColorSchemeResources(
+            R.color.profile_primary,
+            R.color.profile_green,
+            R.color.profile_orange
+        )
+        swipeRefreshLayout.setOnRefreshListener {
+            if (isEditMode) exitEditMode(restoreValues = true)
+            viewModel.refresh()
+        }
+    }
+
+    private fun observeProfile() {
+        viewModel.profileState.observe(viewLifecycleOwner) { result ->
+            when (result) {
+                is NetworkResult.Loading -> {
+                    if (!swipeRefreshLayout.isRefreshing) {
+                        swipeRefreshLayout.isRefreshing = true
+                    }
+                }
+                is NetworkResult.Success -> {
+                    swipeRefreshLayout.isRefreshing = false
+                    profile = result.data
+                    bindSummary()
+                    bindProfileFields()
+                    if (!isEditMode) exitEditMode(restoreValues = false)
+                }
+                is NetworkResult.Error -> {
+                    swipeRefreshLayout.isRefreshing = false
+                    showToast(result.message)
+                }
+                is NetworkResult.Unauthorized -> navigateToLogin()
+            }
+        }
+
+        viewModel.deleteEligibilityState.observe(viewLifecycleOwner) { result ->
+            when (result) {
+                is NetworkResult.Success -> {
+                    currentDeleteEligibility = result.data
+                    bindDeleteEligibility(result.data)
+                }
+                is NetworkResult.Error -> showToast(result.message)
+                is NetworkResult.Unauthorized -> navigateToLogin()
+                is NetworkResult.Loading -> Unit
+            }
+        }
+
+        viewModel.profileActionState.observe(viewLifecycleOwner) { result ->
+            when (result) {
+                is NetworkResult.Loading -> swipeRefreshLayout.isRefreshing = true
+                is NetworkResult.Success -> {
+                    swipeRefreshLayout.isRefreshing = false
+                    selectedPhotoFile = null
+                    if (result.data.contains("photo", ignoreCase = true)) {
+                        view?.setProfileText(R.id.textSelectedPhotoFile, "No file chosen")
+                    }
+                    if (result.data.contains("password", ignoreCase = true)) {
+                        clearPasswordForm()
+                    }
+                    showToast(result.data)
+                    if (result.data.contains("deleted", ignoreCase = true)) {
+                        navigateToLogin()
+                    }
+                }
+                is NetworkResult.Error -> {
+                    swipeRefreshLayout.isRefreshing = false
+                    showToast(result.message)
+                }
+                is NetworkResult.Unauthorized -> navigateToLogin()
+            }
+        }
+    }
+
+    private fun setupHeader() {
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    handleProfileBack()
+                }
+            }
+        )
+
+        view?.findViewById<View>(R.id.buttonProfileBack)?.setOnClickListener {
+            handleProfileBack()
+        }
+    }
+
+    private fun handleProfileBack() {
+        if (isEditMode) {
+            exitEditMode(restoreValues = true)
+            return
+        }
+
+        if (parentFragmentManager.backStackEntryCount > 0) {
+            parentFragmentManager.popBackStack()
+            return
+        }
+
+        activity
+            ?.findViewById<BottomNavigationView>(R.id.bottomNavigation)
+            ?.selectedItemId = R.id.nav_dashboard
+    }
+
+    private fun setupDummyProfile() {
+        bindSummary()
+        bindProfileFields()
+    }
+
+    private fun bindSummary() {
+        val initials = getInitials(profile.name)
+        view?.setProfileText(R.id.textProfileInitials, initials)
+        view?.setProfileText(R.id.textPhotoPreviewInitials, initials)
+        view?.setProfileText(R.id.textProfileName, profile.name)
+        view?.setProfileText(R.id.textProfileEmail, profile.email)
+        view?.setProfileText(R.id.textProfileRole, profile.role.uppercase(Locale.US))
+        view?.setProfileText(R.id.textProfileUsername, profile.username)
+        view?.setProfileText(R.id.textProfileStudentId, profile.studentId)
+        view?.setProfileText(R.id.textProfileDepartment, profile.department)
+        view?.setProfileText(R.id.textProfileMemberSince, profile.memberSince)
+        view?.setProfileText(R.id.textProfileLastLogin, profile.lastLogin)
+        loadProfileImages(profile.profilePhotoUrl)
+    }
+
+    private fun bindProfileFields() {
+        view?.findViewById<EditText>(R.id.editProfileFullName)?.setText(profile.name)
+        view?.findViewById<EditText>(R.id.editProfileEmail)?.setText(profile.email)
+        view?.findViewById<EditText>(R.id.editProfilePhone)?.setText(profile.phone)
+        setGenderSelection(profile.gender)
+        view?.findViewById<EditText>(R.id.editProfileDepartment)?.setText(profile.department)
+        view?.findViewById<EditText>(R.id.editProfileAddress)?.setText(profile.address)
+    }
+
+    private fun setupTabs() {
+        view?.findViewById<View>(R.id.tabProfileInfo)?.setOnClickListener {
+            switchTab(ProfileTab.PROFILE)
+        }
+        view?.findViewById<View>(R.id.tabProfilePhoto)?.setOnClickListener {
+            switchTab(ProfileTab.PHOTO)
+        }
+        view?.findViewById<View>(R.id.tabProfileSecurity)?.setOnClickListener {
+            switchTab(ProfileTab.SECURITY)
+        }
+        view?.findViewById<View>(R.id.tabProfileDelete)?.setOnClickListener {
+            switchTab(ProfileTab.DELETE)
+        }
+    }
+
+    private fun switchTab(tab: ProfileTab) {
+        if (selectedTab != tab && isEditMode) {
+            exitEditMode(restoreValues = true)
+        }
+
+        selectedTab = tab
+        view?.findViewById<View>(R.id.sectionProfileInfo)?.visibility =
+            if (tab == ProfileTab.PROFILE) View.VISIBLE else View.GONE
+        view?.findViewById<View>(R.id.sectionProfilePhoto)?.visibility =
+            if (tab == ProfileTab.PHOTO) View.VISIBLE else View.GONE
+        view?.findViewById<View>(R.id.sectionProfileSecurity)?.visibility =
+            if (tab == ProfileTab.SECURITY) View.VISIBLE else View.GONE
+        view?.findViewById<View>(R.id.sectionProfileDelete)?.visibility =
+            if (tab == ProfileTab.DELETE) View.VISIBLE else View.GONE
+        updateTabStyles()
+    }
+
+    private fun updateTabStyles() {
+        val styles = listOf(
+            ProfileTabStyle(R.id.tabProfileInfo, R.id.iconTabProfileInfo, R.id.textTabProfileInfo, ProfileTab.PROFILE),
+            ProfileTabStyle(R.id.tabProfilePhoto, R.id.iconTabProfilePhoto, R.id.textTabProfilePhoto, ProfileTab.PHOTO),
+            ProfileTabStyle(R.id.tabProfileSecurity, R.id.iconTabProfileSecurity, R.id.textTabProfileSecurity, ProfileTab.SECURITY),
+            ProfileTabStyle(R.id.tabProfileDelete, R.id.iconTabProfileDelete, R.id.textTabProfileDelete, ProfileTab.DELETE)
+        )
+
+        styles.forEach { style ->
+            val selected = selectedTab == style.tab
+            view?.findViewById<View>(style.containerId)?.setBackgroundResource(
+                if (selected) R.drawable.bg_profile_segment_active else 0
+            )
+            view?.findViewById<ImageView>(style.iconId)?.setColorFilter(
+                ContextCompat.getColor(
+                    requireContext(),
+                    if (selected) R.color.white else R.color.profile_text_muted
+                )
+            )
+            view?.findViewById<TextView>(style.textId)?.setTextColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    if (selected) R.color.white else R.color.profile_text_primary
+                )
+            )
+        }
+    }
+
+    private fun setupProfileInfoSection() {
+        setupGenderSpinner()
+        view?.findViewById<View>(R.id.buttonProfileEdit)?.setOnClickListener { enterEditMode() }
+        view?.findViewById<View>(R.id.buttonProfileCancel)?.setOnClickListener {
+            exitEditMode(restoreValues = true)
+        }
+        view?.findViewById<View>(R.id.buttonProfileSave)?.setOnClickListener {
+            saveDummyProfile()
+        }
+        exitEditMode(restoreValues = false)
+    }
+
+    private fun enterEditMode() {
+        isEditMode = true
+        view?.findViewById<TextView>(R.id.textProfileInfoStatus)?.apply {
+            text = "EDITING"
+            setBackgroundResource(R.drawable.bg_profile_editing_badge)
+            setTextColor(ContextCompat.getColor(requireContext(), R.color.profile_primary))
+        }
+        view?.findViewById<View>(R.id.buttonProfileEdit)?.visibility = View.GONE
+        view?.findViewById<View>(R.id.profileEditActions)?.visibility = View.VISIBLE
+
+        setFieldEditable(R.id.editProfileFullName, true)
+        setFieldEditable(R.id.editProfilePhone, true)
+        setFieldEditable(R.id.editProfileAddress, true)
+        setFieldEditable(R.id.editProfileEmail, true)
+        setFieldEditable(R.id.editProfileDepartment, false)
+        setGenderEditable(true)
+    }
+
+    private fun exitEditMode(restoreValues: Boolean) {
+        isEditMode = false
+        if (restoreValues) bindProfileFields()
+
+        view?.findViewById<TextView>(R.id.textProfileInfoStatus)?.apply {
+            text = "READ ONLY"
+            setBackgroundResource(R.drawable.bg_profile_status_badge)
+            setTextColor(ContextCompat.getColor(requireContext(), R.color.profile_text_muted))
+        }
+        view?.findViewById<View>(R.id.buttonProfileEdit)?.visibility = View.VISIBLE
+        view?.findViewById<View>(R.id.profileEditActions)?.visibility = View.GONE
+
+        setFieldEditable(R.id.editProfileFullName, false)
+        setFieldEditable(R.id.editProfileEmail, false)
+        setFieldEditable(R.id.editProfilePhone, false)
+        setFieldEditable(R.id.editProfileDepartment, false)
+        setFieldEditable(R.id.editProfileAddress, false)
+        setGenderEditable(false)
+    }
+
+    private fun saveDummyProfile() {
+        val fullName = view?.findViewById<EditText>(R.id.editProfileFullName)?.text?.toString()?.trim().orEmpty()
+        val email = view?.findViewById<EditText>(R.id.editProfileEmail)?.text?.toString()?.trim().orEmpty()
+        val phone = view?.findViewById<EditText>(R.id.editProfilePhone)?.text?.toString()?.trim().orEmpty()
+        val gender = view?.findViewById<Spinner>(R.id.spinnerProfileGender)?.selectedItem?.toString().orEmpty()
+        val address = view?.findViewById<EditText>(R.id.editProfileAddress)?.text?.toString()?.trim().orEmpty()
+
+        val updatedProfile = profile.copy(
+            name = fullName.ifBlank { profile.name },
+            email = email.ifBlank { profile.email },
+            phone = phone,
+            gender = gender,
+            address = address
+        )
+        exitEditMode(restoreValues = false)
+        viewModel.updateProfile(updatedProfile)
+    }
+
+    private fun setupGenderSpinner() {
+        val spinner = view?.findViewById<Spinner>(R.id.spinnerProfileGender) ?: return
+        val adapter = ArrayAdapter(
+            requireContext(),
+            R.layout.item_profile_spinner_selected,
+            genderOptions
+        ).apply {
+            setDropDownViewResource(R.layout.item_profile_spinner_dropdown)
+        }
+        spinner.adapter = adapter
+        setGenderSelection(profile.gender)
+        setGenderEditable(false)
+    }
+
+    private fun setGenderSelection(value: String) {
+        val spinner = view?.findViewById<Spinner>(R.id.spinnerProfileGender) ?: return
+        val normalizedValue = normalizeGenderForDisplay(value)
+        val index = genderOptions.indexOfFirst { it.equals(normalizedValue, ignoreCase = true) }
+            .takeIf { it >= 0 }
+            ?: 0
+        spinner.setSelection(index)
+    }
+
+    private fun normalizeGenderForDisplay(value: String): String {
+        return when (value.trim().lowercase(Locale.US)) {
+            "male" -> "Male"
+            "female" -> "Female"
+            "other", "others" -> "Others"
+            else -> value
+        }
+    }
+
+    private fun setGenderEditable(editable: Boolean) {
+        view?.findViewById<Spinner>(R.id.spinnerProfileGender)?.apply {
+            isEnabled = editable
+            isClickable = editable
+            alpha = if (editable) 1f else 0.8f
+        }
+    }
+
+    private fun setupPhotoSection() {
+        view?.findViewById<View>(R.id.buttonProfileCamera)?.setOnClickListener {
+            switchTab(ProfileTab.PHOTO)
+        }
+        view?.findViewById<View>(R.id.buttonChoosePhoto)?.setOnClickListener {
+            photoPicker.launch("image/*")
+        }
+        view?.findViewById<View>(R.id.buttonUploadPhoto)?.setOnClickListener {
+            val file = selectedPhotoFile
+            if (file == null) {
+                showToast("Choose a photo first.")
+                return@setOnClickListener
+            }
+            viewModel.uploadPhoto(file)
+        }
+        view?.findViewById<View>(R.id.buttonRemovePhoto)?.setOnClickListener {
+            showRemovePhotoDialog()
+        }
+    }
+
+    private fun handleSelectedPhoto(uri: Uri) {
+        val file = copyUriToCache(uri)
+        if (file == null) {
+            showToast("Unable to read selected photo.")
+            return
+        }
+
+        selectedPhotoFile = file
+        view?.setProfileText(R.id.textSelectedPhotoFile, file.name)
+        view?.findViewById<ImageView>(R.id.imagePhotoPreview)?.apply {
+            setImageURI(uri)
+            visibility = View.VISIBLE
+        }
+        view?.findViewById<TextView>(R.id.textPhotoPreviewInitials)?.visibility = View.GONE
+    }
+
+    private fun copyUriToCache(uri: Uri): File? {
+        val resolver = requireContext().contentResolver
+        val sourceName = resolver.query(uri, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (cursor.moveToFirst() && nameIndex >= 0) cursor.getString(nameIndex) else null
+        }
+        val extension = sourceName?.substringAfterLast('.', missingDelimiterValue = "jpg") ?: "jpg"
+        val file = File(requireContext().cacheDir, "profile_photo_${System.currentTimeMillis()}.$extension")
+
+        return runCatching {
+            resolver.openInputStream(uri)?.use { input ->
+                file.outputStream().use { output -> input.copyTo(output) }
+            } ?: return null
+            file
+        }.getOrNull()
+    }
+
+    private fun setupSecuritySection() {
+        view?.findViewById<View>(R.id.iconToggleCurrentPassword)?.setOnClickListener {
+            currentPasswordVisible = !currentPasswordVisible
+            togglePasswordVisibility(R.id.editCurrentPassword, R.id.iconToggleCurrentPassword, currentPasswordVisible)
+        }
+        view?.findViewById<View>(R.id.iconToggleNewPassword)?.setOnClickListener {
+            newPasswordVisible = !newPasswordVisible
+            togglePasswordVisibility(R.id.editNewPassword, R.id.iconToggleNewPassword, newPasswordVisible)
+        }
+        view?.findViewById<View>(R.id.iconToggleConfirmPassword)?.setOnClickListener {
+            confirmPasswordVisible = !confirmPasswordVisible
+            togglePasswordVisibility(R.id.editConfirmPassword, R.id.iconToggleConfirmPassword, confirmPasswordVisible)
+        }
+        view?.findViewById<EditText>(R.id.editNewPassword)?.doAfterTextChanged {
+            updatePasswordRequirements()
+        }
+        view?.findViewById<EditText>(R.id.editConfirmPassword)?.doAfterTextChanged {
+            updatePasswordRequirements()
+        }
+        view?.findViewById<View>(R.id.buttonCancelPassword)?.setOnClickListener {
+            clearPasswordForm()
+        }
+        view?.findViewById<View>(R.id.buttonSavePassword)?.setOnClickListener {
+            if (validatePasswordForm()) {
+                val currentPassword = view?.findViewById<EditText>(R.id.editCurrentPassword)?.text?.toString().orEmpty()
+                val newPassword = view?.findViewById<EditText>(R.id.editNewPassword)?.text?.toString().orEmpty()
+                val confirmPassword = view?.findViewById<EditText>(R.id.editConfirmPassword)?.text?.toString().orEmpty()
+                viewModel.changePassword(currentPassword, newPassword, confirmPassword)
+            }
+        }
+        updatePasswordRequirements()
+    }
+
+    private fun validatePasswordForm(): Boolean {
+        val currentPassword = view?.findViewById<EditText>(R.id.editCurrentPassword)?.text?.toString().orEmpty()
+        val newPassword = view?.findViewById<EditText>(R.id.editNewPassword)?.text?.toString().orEmpty()
+        val confirmPassword = view?.findViewById<EditText>(R.id.editConfirmPassword)?.text?.toString().orEmpty()
+        var valid = true
+
+        if (currentPassword.isBlank()) {
+            setPasswordError(R.id.containerCurrentPassword, R.id.errorCurrentPassword, "Current password is required")
+            valid = false
+        } else {
+            clearPasswordError(R.id.containerCurrentPassword, R.id.errorCurrentPassword)
+        }
+
+        if (newPassword.length < 8) {
+            setPasswordError(R.id.containerNewPassword, R.id.errorNewPassword, "New password must be at least 8 characters")
+            valid = false
+        } else {
+            clearPasswordError(R.id.containerNewPassword, R.id.errorNewPassword)
+        }
+
+        if (confirmPassword != newPassword || confirmPassword.isBlank()) {
+            setPasswordError(R.id.containerConfirmPassword, R.id.errorConfirmPassword, "Passwords must match")
+            valid = false
+        } else {
+            clearPasswordError(R.id.containerConfirmPassword, R.id.errorConfirmPassword)
+        }
+
+        updatePasswordRequirements()
+        return valid
+    }
+
+    private fun setupDeleteSection() {
+        bindDeleteEligibility(currentDeleteEligibility)
+        view?.findViewById<View>(R.id.buttonDeleteAccount)?.setOnClickListener {
+            if (!currentDeleteEligibility.canDelete) {
+                showToast("Account deletion is restricted.")
+                return@setOnClickListener
+            }
+            showDeleteAccountDialog()
+        }
+    }
+
+    private fun bindDeleteEligibility(eligibility: DeleteEligibilityUiModel) {
+        currentDeleteEligibility = eligibility
+        view?.setProfileText(R.id.textIssuedBooksRestriction, "${eligibility.issuedBooks} issued books")
+        view?.setProfileText(R.id.textPendingFinesRestriction, "${eligibility.pendingFines} pending fines")
+        view?.setProfileText(R.id.textActiveRequestsRestriction, "${eligibility.activeRequests} active requests")
+
+        view?.findViewById<TextView>(R.id.textDeleteRestrictedBadge)?.apply {
+            text = if (eligibility.canDelete) "Eligible" else "Action restricted"
+            setBackgroundResource(
+                if (eligibility.canDelete) R.drawable.bg_profile_editing_badge else R.drawable.bg_profile_restricted_badge
+            )
+            setTextColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    if (eligibility.canDelete) R.color.profile_primary else R.color.profile_red_dark
+                )
+            )
+        }
+
+        view?.findViewById<TextView>(R.id.buttonDeleteAccount)?.apply {
+            isEnabled = true
+            setBackgroundResource(
+                if (eligibility.canDelete) R.drawable.bg_profile_primary_button else R.drawable.bg_profile_disabled_button
+            )
+            alpha = if (eligibility.canDelete) 1f else 0.85f
+        }
+    }
+
+    private fun showDeleteAccountDialog() {
+        val input = EditText(requireContext()).apply {
+            hint = "Type DELETE"
+            setSingleLine(true)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+            setPadding(32, 16, 32, 16)
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Delete account?")
+            .setMessage("This action cannot be undone. Type DELETE to confirm.")
+            .setView(input)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Delete", null)
+            .create()
+            .apply {
+                setOnShowListener {
+                    getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                        if (input.text?.toString()?.trim() == "DELETE") {
+                            dismiss()
+                            viewModel.deleteAccount()
+                        } else {
+                            input.error = "Type DELETE to confirm"
+                        }
+                    }
+                }
+            }
+            .show()
+    }
+
+    private fun showRemovePhotoDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Remove profile photo?")
+            .setMessage("This will show your initials until a new photo is uploaded.")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Remove") { _, _ ->
+                viewModel.removePhoto()
+            }
+            .show()
+    }
+
+    private fun getInitials(name: String): String {
+        val parts = name.trim()
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+
+        return parts
+            .take(2)
+            .mapNotNull { it.firstOrNull()?.uppercaseChar()?.toString() }
+            .joinToString("")
+            .ifBlank { "ST" }
+    }
+
+    private fun showToast(message: String) {
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun loadProfileImages(rawUrl: String?) {
+        val summaryImage = view?.findViewById<ImageView>(R.id.imageProfileAvatar)
+        val summaryInitials = view?.findViewById<TextView>(R.id.textProfileInitials)
+        val previewImage = view?.findViewById<ImageView>(R.id.imagePhotoPreview)
+        val previewInitials = view?.findViewById<TextView>(R.id.textPhotoPreviewInitials)
+        val photoUrl = normalizeProfilePhotoUrl(rawUrl)
+
+        summaryImage?.tag = photoUrl
+        previewImage?.tag = photoUrl
+
+        if (photoUrl.isNullOrBlank()) {
+            summaryImage?.visibility = View.GONE
+            previewImage?.visibility = View.GONE
+            summaryInitials?.visibility = View.VISIBLE
+            previewInitials?.visibility = View.VISIBLE
+            return
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val bitmap = withContext(Dispatchers.IO) {
+                runCatching {
+                    URL(photoUrl).openStream().use { stream ->
+                        BitmapFactory.decodeStream(stream)
+                    }
+                }.onFailure {
+                    Log.w("StudentProfile", "Profile photo failed to load: $photoUrl", it)
+                }.getOrNull()
+            }
+
+            if (bitmap == null) {
+                summaryImage?.visibility = View.GONE
+                previewImage?.visibility = View.GONE
+                summaryInitials?.visibility = View.VISIBLE
+                previewInitials?.visibility = View.VISIBLE
+                return@launch
+            }
+
+            if (summaryImage?.tag == photoUrl) {
+                summaryImage.setImageBitmap(bitmap)
+                summaryImage.visibility = View.VISIBLE
+                summaryInitials?.visibility = View.GONE
+            }
+
+            if (previewImage?.tag == photoUrl) {
+                previewImage.setImageBitmap(bitmap)
+                previewImage.visibility = View.VISIBLE
+                previewInitials?.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun normalizeProfilePhotoUrl(rawUrl: String?): String? {
+        val value = rawUrl?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        if (!value.startsWith("http", ignoreCase = true)) {
+            return Constants.BASE_URL.removeSuffix("api/") + value.trimStart('/')
+        }
+
+        val apiRoot = Constants.BASE_URL.removeSuffix("api/").trimEnd('/')
+        return value
+            .replace("http://127.0.0.1:8000", apiRoot)
+            .replace("http://localhost:8000", apiRoot)
+            .replace("https://127.0.0.1:8000", apiRoot)
+            .replace("https://localhost:8000", apiRoot)
+    }
+
+    private fun navigateToLogin() {
+        if (!isAdded) return
+        val intent = Intent(requireContext(), LoginActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+        requireActivity().finish()
+    }
+
+    private fun setFieldEditable(fieldId: Int, editable: Boolean) {
+        view?.findViewById<EditText>(fieldId)?.apply {
+            isFocusable = editable
+            isFocusableInTouchMode = editable
+            isCursorVisible = editable
+            isLongClickable = editable
+            isEnabled = true
+            if (!editable) clearFocus()
+        }
+    }
+
+    private fun togglePasswordVisibility(fieldId: Int, iconId: Int, visible: Boolean) {
+        val field = view?.findViewById<EditText>(fieldId) ?: return
+        field.inputType = if (visible) {
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+        } else {
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
+        field.setSelection(field.text?.length ?: 0)
+        view?.findViewById<ImageView>(iconId)?.setImageResource(
+            if (visible) R.drawable.ic_eye_off else R.drawable.ic_eye
+        )
+    }
+
+    private fun updatePasswordRequirements() {
+        val newPassword = view?.findViewById<EditText>(R.id.editNewPassword)?.text?.toString().orEmpty()
+        val confirmPassword = view?.findViewById<EditText>(R.id.editConfirmPassword)?.text?.toString().orEmpty()
+        updateRequirement(R.id.textReqLength, "At least 8 characters", newPassword.length >= 8)
+        updateRequirement(R.id.textReqUppercase, "At least one uppercase letter", newPassword.any { it.isUpperCase() })
+        updateRequirement(R.id.textReqLowercase, "At least one lowercase letter", newPassword.any { it.isLowerCase() })
+        updateRequirement(R.id.textReqNumber, "At least one number", newPassword.any { it.isDigit() })
+        updateRequirement(
+            R.id.textReqMatch,
+            "Passwords must match",
+            newPassword.isNotBlank() && newPassword == confirmPassword
+        )
+    }
+
+    private fun updateRequirement(textId: Int, label: String, met: Boolean) {
+        view?.findViewById<TextView>(textId)?.apply {
+            text = "${if (met) "OK" else "--"} $label"
+            setTextColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    if (met) R.color.profile_green else R.color.profile_text_muted
+                )
+            )
+        }
+    }
+
+    private fun setPasswordError(containerId: Int, errorId: Int, message: String) {
+        view?.findViewById<LinearLayout>(containerId)?.setBackgroundResource(R.drawable.bg_profile_input_error)
+        view?.findViewById<TextView>(errorId)?.apply {
+            text = message
+            visibility = View.VISIBLE
+        }
+    }
+
+    private fun clearPasswordError(containerId: Int, errorId: Int) {
+        view?.findViewById<LinearLayout>(containerId)?.setBackgroundResource(R.drawable.bg_profile_input)
+        view?.findViewById<TextView>(errorId)?.visibility = View.GONE
+    }
+
+    private fun clearPasswordForm() {
+        view?.findViewById<EditText>(R.id.editCurrentPassword)?.text = null
+        view?.findViewById<EditText>(R.id.editNewPassword)?.text = null
+        view?.findViewById<EditText>(R.id.editConfirmPassword)?.text = null
+        clearPasswordError(R.id.containerCurrentPassword, R.id.errorCurrentPassword)
+        clearPasswordError(R.id.containerNewPassword, R.id.errorNewPassword)
+        clearPasswordError(R.id.containerConfirmPassword, R.id.errorConfirmPassword)
+        updatePasswordRequirements()
+    }
+
+    private fun View.setProfileText(id: Int, value: String) {
+        findViewById<TextView>(id)?.text = value
+    }
+
+    private data class ProfileTabStyle(
+        val containerId: Int,
+        val iconId: Int,
+        val textId: Int,
+        val tab: ProfileTab
+    )
 }
 

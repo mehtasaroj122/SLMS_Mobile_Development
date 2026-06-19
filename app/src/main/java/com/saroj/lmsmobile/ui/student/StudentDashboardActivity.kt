@@ -16,6 +16,7 @@ import com.saroj.lmsmobile.ui.student.fragments.StudentDashboardFragment
 import com.saroj.lmsmobile.ui.student.fragments.StudentMyRequestsFragment
 import com.saroj.lmsmobile.ui.student.fragments.StudentMyBooksFragment
 import com.saroj.lmsmobile.ui.student.fragments.StudentMyFinesFragment
+import com.saroj.lmsmobile.ui.student.fragments.StudentProfileFragment
 import com.saroj.lmsmobile.ui.student.fragments.StudentSearchBooksFragment
 
 /**
@@ -133,8 +134,9 @@ class StudentDashboardActivity : BaseActivity() {
         dialog.setContentView(view)
 
         view.findViewById<View>(R.id.rowProfile).setOnClickListener {
+            openedSecondaryScreen = true
             dialog.dismiss()
-            Toast.makeText(this, "Profile coming soon", Toast.LENGTH_SHORT).show()
+            openProfile()
         }
 
         view.findViewById<View>(R.id.rowNotifications).setOnClickListener {
@@ -201,7 +203,7 @@ class StudentDashboardActivity : BaseActivity() {
      * Loads a screen opened outside the bottom navigation while keeping the nav visible.
      */
     private fun loadSecondaryFragment(fragment: Fragment) {
-        if (fragment is StudentMyRequestsFragment) {
+        if (fragment is StudentMyRequestsFragment || fragment is StudentProfileFragment) {
             markBottomNavItemChecked(R.id.nav_more)
         }
         supportFragmentManager.beginTransaction()
@@ -223,6 +225,15 @@ class StudentDashboardActivity : BaseActivity() {
             return
         }
         loadSecondaryFragment(StudentMyRequestsFragment())
+    }
+
+    fun openProfile() {
+        val currentFragment = supportFragmentManager.findFragmentById(R.id.fragmentContainer)
+        if (currentFragment is StudentProfileFragment) {
+            markBottomNavItemChecked(R.id.nav_more)
+            return
+        }
+        loadSecondaryFragment(StudentProfileFragment())
     }
 
     private fun markBottomNavItemChecked(itemId: Int) {

@@ -12,9 +12,12 @@ import com.saroj.lmsmobile.data.models.dashboard.DashboardResponse
 import com.saroj.lmsmobile.data.models.fine.Fine
 import com.saroj.lmsmobile.data.models.issue.Issue
 import com.saroj.lmsmobile.data.models.issue.IssueRequest
+import com.saroj.lmsmobile.data.models.profile.ChangePasswordRequest
+import com.saroj.lmsmobile.data.models.profile.ProfileUpdateRequest
 import com.saroj.lmsmobile.data.models.student.Student
 import com.saroj.lmsmobile.data.models.studentdashboard.StudentDashboardEnvelope
 import com.google.gson.JsonElement
+import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -63,6 +66,28 @@ interface ApiService {
      */
     @GET("profile")
     suspend fun getProfile(): Response<ProfileResponse>
+
+    @GET("profile")
+    suspend fun getProfileJson(): Response<JsonElement>
+
+    @PUT("profile")
+    suspend fun updateProfile(@Body request: ProfileUpdateRequest): Response<JsonElement>
+
+    @POST("profile/change-password")
+    suspend fun changePassword(@Body request: ChangePasswordRequest): Response<JsonElement>
+
+    @GET("profile/delete-eligibility")
+    suspend fun getProfileDeleteEligibility(): Response<JsonElement>
+
+    @Multipart
+    @POST("profile/photo")
+    suspend fun uploadProfilePhoto(@Part photo: MultipartBody.Part): Response<JsonElement>
+
+    @DELETE("profile/photo")
+    suspend fun removeProfilePhoto(): Response<JsonElement>
+
+    @DELETE("profile")
+    suspend fun deleteProfile(): Response<JsonElement>
 
     /**
      * Test endpoint to verify if token is valid (returns 401 if invalid).

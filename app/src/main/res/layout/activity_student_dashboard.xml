@@ -27,7 +27,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
+        android:background="@color/white"
         app:elevation="16dp"
+        app:itemIconTint="@color/student_bottom_nav_item_color"
+        app:itemTextColor="@color/student_bottom_nav_item_color"
+        app:labelVisibilityMode="labeled"
         app:menu="@menu/menu_student_bottom_navigation" />
 
 </LinearLayout>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_notification_item"
+    android:orientation="horizontal">
+
+    <View
+        android:layout_width="3dp"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_notification_accent" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/textNotificationTitle2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Request Approved"
+            android:textColor="@color/student_text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/textNotificationMessage2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:text="'1984' has been approved!"
+            android:textColor="@color/student_text_secondary"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/textNotificationTime2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="1 day ago"
+            android:textColor="@color/student_text_muted"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/viewNotificationUnread2"
+        android:layout_width="8dp"
+        android:layout_height="8dp"
+        android:layout_gravity="center_vertical"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/bg_notification_dot" />
+</LinearLayout>

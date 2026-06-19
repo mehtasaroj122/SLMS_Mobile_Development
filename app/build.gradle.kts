@@ -65,6 +65,7 @@ dependencies {
     // UI Components
     implementation(libs.recyclerview)
     implementation(libs.cardview)
+    implementation(libs.androidx.swiperefreshlayout)
 
     // Testing
     testImplementation(libs.junit)

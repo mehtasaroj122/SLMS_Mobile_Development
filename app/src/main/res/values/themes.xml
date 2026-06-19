@@ -12,6 +12,11 @@
 
     <style name="Theme.LMSMobile" parent="Base.Theme.LMSMobile" />
 
+    <style name="Theme.LMSMobile.Login" parent="Base.Theme.LMSMobile">
+        <item name="android:statusBarColor">@color/auth_bg_start</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
     <!-- Splash Theme -->
     <style name="Theme.LMSMobile.Splash" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowNoTitle">true</item>

@@ -8,6 +8,7 @@ import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.saroj.lmsmobile.MainApplication
@@ -127,6 +128,14 @@ class LoginActivity : AppCompatActivity() {
         loginButton.setOnClickListener {
             performLogin()
         }
+
+        findViewById<TextView>(R.id.textViewForgotPassword).setOnClickListener {
+            Toast.makeText(this, "Forgot password is not available yet", Toast.LENGTH_SHORT).show()
+        }
+
+        findViewById<TextView>(R.id.textViewSignUp).setOnClickListener {
+            Toast.makeText(this, "Sign up is not available yet", Toast.LENGTH_SHORT).show()
+        }
     }
 
     /**
@@ -193,8 +202,12 @@ class LoginActivity : AppCompatActivity() {
         val cursorPosition = passwordEditText.selectionStart
         if (isVisible) {
             passwordEditText.inputType = InputType.TYPE_CLASS_TEXT
+            togglePasswordButton.setImageResource(R.drawable.ic_eye_off)
+            togglePasswordButton.contentDescription = "Hide password"
         } else {
             passwordEditText.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            togglePasswordButton.setImageResource(R.drawable.ic_eye)
+            togglePasswordButton.contentDescription = "Show password"
         }
         passwordEditText.setSelection(cursorPosition)
     }

@@ -10,10 +10,10 @@ object Constants {
     // Base URL for API requests - Change based on emulator/device
 
         // for emulator
-    const val BASE_URL = "http://10.0.2.2:8000/api/"
+//    const val BASE_URL = "http://10.0.2.2:8000/api/"
 
         // for real mobile
-//    const val BASE_URL = "http://192.168.1.68:8000/api/"
+    const val BASE_URL = "http://192.168.1.68:8000/api/"
 
     // API Endpoints
     object Endpoints {

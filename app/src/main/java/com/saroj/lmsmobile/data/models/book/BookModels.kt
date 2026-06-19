@@ -11,16 +11,29 @@ data class Book(
     val title: String,
     val author: String? = null,
     val isbn: String? = null,
+    @SerializedName(value = "accession_no", alternate = ["accession_number", "accessionNo"])
+    val accessionNo: String? = null,
     val publisher: String? = null,
     val edition: String? = null,
     val category: String? = null,
+    val condition: String? = null,
+    @SerializedName(value = "location", alternate = ["rack", "rack_no", "rack_number"])
+    val location: String? = null,
     @SerializedName(value = "quantity", alternate = ["total_copies"])
     val quantity: Int? = 0,
     @SerializedName(value = "available_quantity", alternate = ["available_copies"])
     val available_quantity: Int? = 0,
+    @SerializedName(value = "availability_status", alternate = ["availability", "status"])
+    val availabilityStatus: String? = null,
+    @SerializedName(value = "request_state", alternate = ["student_request_state", "request_status"])
+    val requestState: String? = null,
     val description: String? = null,
     @SerializedName("publication_year")
     val publicationYear: Int? = null,
+    @SerializedName(
+        value = "cover_image",
+        alternate = ["cover_image_url", "cover_url", "image_url", "cover", "thumbnail_url"]
+    )
     val cover_image: String? = null,
     @SerializedName("created_at")
     val createdAt: String? = null,
@@ -59,5 +72,15 @@ data class BookRequestModel(
     val createdAt: String? = null,
     @SerializedName("updated_at")
     val updatedAt: String? = null
+)
+
+data class StudentBookRequestBody(
+    @SerializedName("book_id")
+    val bookId: Int
+)
+
+data class StudentBookRequestResponse(
+    val message: String? = null,
+    val data: BookRequestModel? = null
 )
 

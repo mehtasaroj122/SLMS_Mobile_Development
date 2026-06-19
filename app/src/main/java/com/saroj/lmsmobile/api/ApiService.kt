@@ -4,12 +4,15 @@ import com.saroj.lmsmobile.data.models.auth.LoginRequest
 import com.saroj.lmsmobile.data.models.auth.LoginResponse
 import com.saroj.lmsmobile.data.models.auth.ProfileResponse
 import com.saroj.lmsmobile.data.models.book.Book
+import com.saroj.lmsmobile.data.models.book.StudentBookRequestBody
+import com.saroj.lmsmobile.data.models.book.StudentBookRequestResponse
 import com.saroj.lmsmobile.data.models.common.PaginatedResponse
 import com.saroj.lmsmobile.data.models.dashboard.DashboardResponse
 import com.saroj.lmsmobile.data.models.fine.Fine
 import com.saroj.lmsmobile.data.models.issue.Issue
 import com.saroj.lmsmobile.data.models.issue.IssueRequest
 import com.saroj.lmsmobile.data.models.student.Student
+import com.saroj.lmsmobile.data.models.studentdashboard.StudentDashboardEnvelope
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -92,6 +95,14 @@ interface ApiService {
         @Query("q") query: String,
         @Query("page") page: Int
     ): Response<PaginatedResponse<Book>>
+
+    /**
+     * Submit an authenticated student request for a book.
+     */
+    @POST("student/requests")
+    suspend fun submitStudentBookRequest(
+        @Body request: StudentBookRequestBody
+    ): Response<StudentBookRequestResponse>
 
     /**
      * Get all available books (not currently issued).
@@ -192,6 +203,12 @@ interface ApiService {
      */
     @GET("dashboard")
     suspend fun getDashboard(): Response<DashboardResponse>
+
+    /**
+     * Get the authenticated student's dashboard summary.
+     */
+    @GET("student/dashboard")
+    suspend fun getStudentDashboard(): Response<StudentDashboardEnvelope>
 
     // ==================== OVERDUE ====================
 

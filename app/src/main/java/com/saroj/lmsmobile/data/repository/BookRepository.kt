@@ -1,7 +1,11 @@
 package com.saroj.lmsmobile.data.repository
 
 import com.saroj.lmsmobile.api.ApiService
+import com.google.gson.Gson
+import com.saroj.lmsmobile.data.models.common.ErrorResponse
 import com.saroj.lmsmobile.data.models.book.Book
+import com.saroj.lmsmobile.data.models.book.StudentBookRequestBody
+import com.saroj.lmsmobile.data.models.book.StudentBookRequestResponse
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.models.common.PaginatedResponse
 import com.saroj.lmsmobile.storage.TokenManager
@@ -85,6 +89,25 @@ class BookRepository(
     }
 
     /**
+     * Submit a student request for a book.
+     */
+    fun submitStudentBookRequest(bookId: Int): Flow<NetworkResult<StudentBookRequestResponse>> = flow {
+        emit(NetworkResult.Loading())
+        val response = apiService.submitStudentBookRequest(StudentBookRequestBody(bookId))
+        if (response.isSuccessful) {
+            emit(
+                NetworkResult.Success(
+                    response.body() ?: StudentBookRequestResponse("Request submitted successfully.", null)
+                )
+            )
+        } else {
+            handleError(response).collect { emit(it) }
+        }
+    }.catch { e ->
+        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+    }
+
+    /**
      * Helper to handle paginated responses.
      */
     private fun <T> handlePaginatedResponse(response: Response<PaginatedResponse<T>>): Flow<NetworkResult<PaginatedResponse<T>>> = flow {
@@ -112,6 +135,7 @@ class BookRepository(
      * Helper to handle API errors.
      */
     private fun <T> handleError(response: Response<T>): Flow<NetworkResult<T>> = flow {
+        val message = parseErrorMessage(response)
         when (response.code()) {
             Constants.HTTP_UNAUTHORIZED -> {
                 tokenManager.clearAllData()
@@ -119,7 +143,28 @@ class BookRepository(
             }
             Constants.HTTP_FORBIDDEN -> emit(NetworkResult.Error(Constants.ERROR_FORBIDDEN, response.code()))
             Constants.HTTP_NOT_FOUND -> emit(NetworkResult.Error(Constants.ERROR_NOT_FOUND, response.code()))
-            else -> emit(NetworkResult.Error(response.message() ?: Constants.ERROR_UNKNOWN, response.code()))
+            Constants.HTTP_UNPROCESSABLE_ENTITY -> emit(NetworkResult.Error(message, response.code()))
+            else -> emit(NetworkResult.Error(message, response.code()))
         }
+    }
+
+    private fun <T> parseErrorMessage(response: Response<T>): String {
+        val rawError = runCatching { response.errorBody()?.string() }.getOrNull()
+        if (rawError.isNullOrBlank()) {
+            return response.message().takeIf { it.isNotBlank() } ?: Constants.ERROR_UNKNOWN
+        }
+
+        val parsed = runCatching {
+            Gson().fromJson(rawError, ErrorResponse::class.java)
+        }.getOrNull()
+
+        val firstValidationError = parsed?.errors
+            ?.values
+            ?.firstOrNull()
+            ?.firstOrNull()
+
+        return firstValidationError
+            ?: parsed?.message?.takeIf { it.isNotBlank() }
+            ?: rawError.take(140)
     }
 }

@@ -42,4 +42,73 @@
     <color name="status_inactive">#9E9E9E</color>
     <color name="status_overdue">#F44336</color>
 
+    <!-- Auth Screen Colors -->
+    <color name="auth_bg_start">#EEF8FF</color>
+    <color name="auth_bg_mid">#F8FCFF</color>
+    <color name="auth_bg_end">#EAF5FF</color>
+    <color name="auth_primary">#061A44</color>
+    <color name="auth_primary_dark">#020B26</color>
+    <color name="auth_secondary">#0B74C9</color>
+    <color name="auth_text_primary">#0F172A</color>
+    <color name="auth_text_secondary">#64748B</color>
+    <color name="auth_text_hint">#94A3B8</color>
+    <color name="auth_border">#D8E2EF</color>
+    <color name="auth_card">#F8FFFFFF</color>
+    <color name="auth_input_bg">#FCFEFF</color>
+    <color name="auth_badge_bg">#F4FAFF</color>
+    <color name="auth_icon">#657696</color>
+    <color name="auth_line">#E2ECF6</color>
+
+    <!-- Student Dashboard Colors -->
+    <color name="student_bg">#F4F8FF</color>
+    <color name="student_header_start">#0B6EF6</color>
+    <color name="student_header_mid">#4361EE</color>
+    <color name="student_header_end">#6D28D9</color>
+    <color name="student_primary">#2563EB</color>
+    <color name="student_purple">#7C3AED</color>
+    <color name="student_green">#10B981</color>
+    <color name="student_success">#16A34A</color>
+    <color name="student_yellow">#F59E0B</color>
+    <color name="student_danger">#EF4444</color>
+    <color name="student_text_primary">#0F172A</color>
+    <color name="student_text_secondary">#475569</color>
+    <color name="student_text_muted">#64748B</color>
+    <color name="student_border">#E2E8F0</color>
+    <color name="student_card_border">#E5EDF7</color>
+    <color name="student_card">#FFFFFF</color>
+    <color name="student_nav_inactive">#64748B</color>
+
+    <!-- Student Search Books Colors -->
+    <color name="search_bg">#F4F8FF</color>
+    <color name="search_card">#FFFFFF</color>
+    <color name="search_text_primary">#0F172A</color>
+    <color name="search_text_secondary">#475569</color>
+    <color name="search_text_muted">#64748B</color>
+    <color name="search_text_hint">#94A3B8</color>
+    <color name="search_border">#E2E8F0</color>
+    <color name="search_chip_border">#CBD5E1</color>
+    <color name="search_card_border">#E5EDF7</color>
+    <color name="search_primary">#2563EB</color>
+    <color name="search_navy">#061A44</color>
+    <color name="search_green">#10B981</color>
+    <color name="search_success">#059669</color>
+    <color name="search_orange">#F97316</color>
+    <color name="search_orange_dark">#EA580C</color>
+    <color name="search_yellow_bg">#FEF3C7</color>
+    <color name="search_yellow_text">#B45309</color>
+    <color name="search_purple">#7C3AED</color>
+    <color name="search_red">#EF4444</color>
+    <color name="search_disabled_bg">#E5E7EB</color>
+    <color name="search_disabled_text">#94A3B8</color>
+    <color name="search_badge_green_bg">#DCFCE7</color>
+    <color name="search_badge_orange_bg">#FFEDD5</color>
+    <color name="search_badge_purple_bg">#EDE9FE</color>
+    <color name="search_badge_blue_bg">#DBEAFE</color>
+    <color name="search_icon_blue_bg">#DBEAFE</color>
+    <color name="search_icon_yellow_bg">#FEF3C7</color>
+    <color name="search_icon_orange_bg">#FFEDD5</color>
+    <color name="search_icon_green_bg">#DCFCE7</color>
+    <color name="search_icon_purple_bg">#EDE9FE</color>
+    <color name="search_icon_red_bg">#FEE2E2</color>
+
 </resources>

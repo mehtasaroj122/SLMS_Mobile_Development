@@ -27,9 +27,16 @@ class BookRepository(
     /**
      * Get all books with pagination.
      */
-    fun getBooks(page: Int): Flow<NetworkResult<PaginatedResponse<Book>>> = flow {
+    fun getBooks(
+        page: Int,
+        category: String? = null,
+        availability: String? = null,
+        condition: String? = null,
+        sort: String? = null,
+        pageSize: Int = 20
+    ): Flow<NetworkResult<PaginatedResponse<Book>>> = flow {
         emit(NetworkResult.Loading())
-        val response = apiService.getBooks(page)
+        val response = apiService.getBooks(page, category, availability, condition, sort, pageSize)
         handlePaginatedResponse(response).collect { emit(it) }
     }.catch { e ->
         emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
@@ -62,10 +69,18 @@ class BookRepository(
     /**
      * Search books by query.
      */
-    fun searchBooks(query: String, page: Int): Flow<NetworkResult<PaginatedResponse<Book>>> = flow {
+    fun searchBooks(
+        query: String,
+        page: Int,
+        category: String? = null,
+        availability: String? = null,
+        condition: String? = null,
+        sort: String? = null,
+        pageSize: Int = 20
+    ): Flow<NetworkResult<PaginatedResponse<Book>>> = flow {
         emit(NetworkResult.Loading())
         try {
-            val response = apiService.searchBooks(query, page)
+            val response = apiService.searchBooks(query, page, category, availability, condition, sort, pageSize)
             handlePaginatedResponse(response).collect { emit(it) }
         } catch (e: Exception) {
             emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))

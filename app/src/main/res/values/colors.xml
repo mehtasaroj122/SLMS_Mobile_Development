@@ -111,4 +111,31 @@
     <color name="search_icon_purple_bg">#EDE9FE</color>
     <color name="search_icon_red_bg">#FEE2E2</color>
 
+    <!-- Student My Books Colors -->
+    <color name="my_books_bg">#F4F8FF</color>
+    <color name="my_books_card">#FFFFFF</color>
+    <color name="my_books_primary">#2563EB</color>
+    <color name="my_books_navy">#0F172A</color>
+    <color name="my_books_text_primary">#0F172A</color>
+    <color name="my_books_text_secondary">#475569</color>
+    <color name="my_books_text_muted">#64748B</color>
+    <color name="my_books_text_hint">#94A3B8</color>
+    <color name="my_books_border">#E2E8F0</color>
+    <color name="my_books_chip_border">#CBD5E1</color>
+    <color name="my_books_card_border">#E5EDF7</color>
+    <color name="my_books_green">#16A34A</color>
+    <color name="my_books_orange">#F97316</color>
+    <color name="my_books_orange_dark">#EA580C</color>
+    <color name="my_books_yellow">#F59E0B</color>
+    <color name="my_books_red">#EF4444</color>
+    <color name="my_books_red_dark">#DC2626</color>
+    <color name="my_books_purple">#7C3AED</color>
+    <color name="my_books_blue_bg">#DBEAFE</color>
+    <color name="my_books_green_bg">#DCFCE7</color>
+    <color name="my_books_orange_bg">#FFEDD5</color>
+    <color name="my_books_yellow_bg">#FEF3C7</color>
+    <color name="my_books_red_bg">#FEE2E2</color>
+    <color name="my_books_purple_bg">#EDE9FE</color>
+    <color name="my_books_gray_bg">#F1F5F9</color>
+
 </resources>

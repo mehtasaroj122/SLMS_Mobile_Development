@@ -27,10 +27,13 @@ class StudentSearchBooksViewModel(
     private val _totalBooks = MutableLiveData(0)
     val totalBooks: LiveData<Int> = _totalBooks
 
+    private val _bottomLoading = MutableLiveData(false)
+    val bottomLoading: LiveData<Boolean> = _bottomLoading
+
     private val loadedBooks = mutableListOf<StudentSearchBookUiModel>()
     private val studentRequestStates = mutableMapOf<Int, BookRequestState>()
     private var selectedCategory: String? = null
-    private var availableOnly: Boolean = false
+    private var availabilityFilter: AvailabilityFilter = AvailabilityFilter.ALL
     private var selectedCondition: String? = null
     private var selectedSort: SortOption = SortOption.TITLE_ASC
     private var currentPage = 1
@@ -38,7 +41,13 @@ class StudentSearchBooksViewModel(
     private var isLoading = false
     private var isSearching = false
     private var currentQuery = ""
+    private var catalogJob: Job? = null
     private var searchJob: Job? = null
+
+    private companion object {
+        const val PAGE_SIZE = 20
+        const val NEXT_PAGE_DELAY_MS = 1_000L
+    }
 
     fun loadBooks(refresh: Boolean = false) {
         if (isLoading) return
@@ -90,30 +99,33 @@ class StudentSearchBooksViewModel(
 
     fun setCategory(category: String?) {
         selectedCategory = category
-        publishFilteredBooks()
+        reloadCurrentCatalog()
     }
 
-    fun setAvailableOnly(enabled: Boolean) {
-        availableOnly = enabled
-        publishFilteredBooks()
+    fun setAvailabilityFilter(filter: AvailabilityFilter) {
+        availabilityFilter = filter
+        reloadCurrentCatalog()
     }
 
     fun setCondition(condition: String?) {
         selectedCondition = condition
-        publishFilteredBooks()
+        reloadCurrentCatalog()
     }
 
     fun setSort(sortOption: SortOption) {
         selectedSort = sortOption
-        publishFilteredBooks()
+        reloadCurrentCatalog()
     }
 
     fun resetFilters() {
+        searchJob?.cancel()
         selectedCategory = null
-        availableOnly = false
+        availabilityFilter = AvailabilityFilter.ALL
         selectedCondition = null
         selectedSort = SortOption.TITLE_ASC
-        publishFilteredBooks()
+        resetPagination(keepQuery = false)
+        refreshStudentRequestStates()
+        loadPage(page = 1, append = false)
     }
 
     fun refreshStudentRequestStates() {
@@ -136,10 +148,10 @@ class StudentSearchBooksViewModel(
 
     fun categories(): List<String> = loadedBooks.map { it.category }.filter { it.isNotBlank() }.distinct().sorted()
 
-    fun conditions(): List<String> = loadedBooks.map { it.condition }.filter { it.isNotBlank() }.distinct().sorted()
+    fun conditions(): List<String> = listOf("New", "Good", "Damaged")
 
     fun currentFilterState(): FilterState {
-        return FilterState(selectedCategory, availableOnly, selectedCondition, selectedSort)
+        return FilterState(selectedCategory, availabilityFilter, selectedCondition, selectedSort)
     }
 
     fun submitRequest(book: StudentSearchBookUiModel) {
@@ -177,20 +189,47 @@ class StudentSearchBooksViewModel(
     }
 
     private fun loadPage(page: Int, append: Boolean) {
-        viewModelScope.launch {
-            isLoading = true
+        if (isLoading) return
+        isLoading = true
+        catalogJob?.cancel()
+        catalogJob = viewModelScope.launch {
+            if (append) {
+                _bottomLoading.value = true
+                delay(NEXT_PAGE_DELAY_MS)
+            }
             if (!append) _booksState.value = NetworkResult.Loading()
-            bookRepository.getBooks(page).collect { result ->
+            bookRepository.getBooks(
+                page = page,
+                category = selectedCategory,
+                availability = availabilityParam(),
+                condition = selectedCondition,
+                sort = selectedSort.apiValue,
+                pageSize = PAGE_SIZE
+            ).collect { result ->
                 handleBooksResult(result, append)
             }
         }
     }
 
     private fun loadSearchPage(query: String, page: Int, append: Boolean) {
-        viewModelScope.launch {
-            isLoading = true
+        if (isLoading) return
+        isLoading = true
+        catalogJob?.cancel()
+        catalogJob = viewModelScope.launch {
+            if (append) {
+                _bottomLoading.value = true
+                delay(NEXT_PAGE_DELAY_MS)
+            }
             if (!append) _booksState.value = NetworkResult.Loading()
-            bookRepository.searchBooks(query, page).collect { result ->
+            bookRepository.searchBooks(
+                query = query,
+                page = page,
+                category = selectedCategory,
+                availability = availabilityParam(),
+                condition = selectedCondition,
+                sort = selectedSort.apiValue,
+                pageSize = PAGE_SIZE
+            ).collect { result ->
                 handleBooksResult(result, append)
             }
         }
@@ -215,14 +254,17 @@ class StudentSearchBooksViewModel(
                 loadedBooks.addAll(uniqueBooks)
 
                 isLoading = false
+                _bottomLoading.value = false
                 publishFilteredBooks()
             }
             is NetworkResult.Error -> {
                 isLoading = false
+                _bottomLoading.value = false
                 _booksState.value = NetworkResult.Error(result.message, result.code)
             }
             is NetworkResult.Unauthorized -> {
                 isLoading = false
+                _bottomLoading.value = false
                 _booksState.value = NetworkResult.Unauthorized()
             }
         }
@@ -239,15 +281,7 @@ class StudentSearchBooksViewModel(
     }
 
     private fun publishFilteredBooks() {
-        val filteredBooks = loadedBooks
-            .asSequence()
-            .filter { book -> selectedCategory == null || book.category == selectedCategory }
-            .filter { book -> !availableOnly || book.availableQuantity > 0 }
-            .filter { book -> selectedCondition == null || book.condition == selectedCondition }
-            .toList()
-            .sortedWith(selectedSort.comparator)
-
-        _booksState.value = NetworkResult.Success(filteredBooks)
+        _booksState.value = NetworkResult.Success(loadedBooks.sortedWith(selectedSort.comparator))
     }
 
     private fun applyStudentRequestStatesToLoadedBooks() {
@@ -264,12 +298,33 @@ class StudentSearchBooksViewModel(
     private fun resetPagination(keepQuery: Boolean) {
         currentPage = 1
         lastPage = 1
+        catalogJob?.cancel()
         isLoading = false
+        _bottomLoading.value = false
         if (!keepQuery) {
             currentQuery = ""
             isSearching = false
         }
         loadedBooks.clear()
+    }
+
+    private fun reloadCurrentCatalog() {
+        searchJob?.cancel()
+        resetPagination(keepQuery = true)
+        refreshStudentRequestStates()
+        if (isSearching && currentQuery.isNotBlank()) {
+            loadSearchPage(currentQuery, page = 1, append = false)
+        } else {
+            loadPage(page = 1, append = false)
+        }
+    }
+
+    private fun availabilityParam(): String? {
+        return when (availabilityFilter) {
+            AvailabilityFilter.ALL -> null
+            AvailabilityFilter.AVAILABLE_ONLY -> "available"
+            AvailabilityFilter.UNAVAILABLE_ONLY -> "unavailable"
+        }
     }
 
     private fun Book.toStudentSearchUiModel(): StudentSearchBookUiModel {
@@ -290,6 +345,7 @@ class StudentSearchBooksViewModel(
                 if (availableCopies > 0) "available" else "unavailable"
             ),
             coverImageUrl = cover_image,
+            createdAt = createdAt,
             requestState = studentRequestStates[id] ?: requestState.toBookRequestState(availableCopies)
         )
     }
@@ -313,18 +369,31 @@ class StudentSearchBooksViewModel(
 
     data class FilterState(
         val category: String?,
-        val availableOnly: Boolean,
+        val availabilityFilter: AvailabilityFilter,
         val condition: String?,
         val sortOption: SortOption
     )
 
+    enum class AvailabilityFilter(val label: String) {
+        ALL("All Availability"),
+        AVAILABLE_ONLY("Available Only"),
+        UNAVAILABLE_ONLY("Unavailable Only")
+    }
+
     enum class SortOption(
         val label: String,
+        val apiValue: String,
         val comparator: Comparator<StudentSearchBookUiModel>
     ) {
-        TITLE_ASC("Title A-Z", compareBy { it.title.lowercase() }),
-        TITLE_DESC("Title Z-A", compareByDescending { it.title.lowercase() }),
-        AUTHOR_ASC("Author A-Z", compareBy { it.author.lowercase() }),
-        AVAILABLE_DESC("Most Available", compareByDescending { it.availableQuantity })
+        TITLE_ASC("Title A-Z", "title_asc", compareBy { it.title.lowercase() }),
+        TITLE_DESC("Title Z-A", "title_desc", compareByDescending { it.title.lowercase() }),
+        AUTHOR_ASC("Author A-Z", "author_asc", compareBy { it.author.lowercase() }),
+        AVAILABLE_DESC("Most Available", "available_desc", compareByDescending { it.availableQuantity }),
+        RECENTLY_ADDED(
+            "Recently Added",
+            "recently_added",
+            compareByDescending<StudentSearchBookUiModel> { it.createdAt.orEmpty() }
+                .thenByDescending { it.id }
+        )
     }
 }

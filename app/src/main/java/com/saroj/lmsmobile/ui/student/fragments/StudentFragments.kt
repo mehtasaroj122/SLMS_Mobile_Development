@@ -35,11 +35,21 @@ import com.saroj.lmsmobile.data.models.studentdashboard.StudentDashboardResponse
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.repository.BookRepository
 import com.saroj.lmsmobile.data.repository.StudentDashboardRepository
+import com.saroj.lmsmobile.data.repository.StudentMyBooksRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
+import com.saroj.lmsmobile.ui.student.adapter.MyBooksAdapter
 import com.saroj.lmsmobile.ui.student.adapter.StudentSearchBookAdapter
 import com.saroj.lmsmobile.ui.student.model.BookRequestState
+import com.saroj.lmsmobile.ui.student.model.MyBookStatus
+import com.saroj.lmsmobile.ui.student.model.MyBookUiModel
+import com.saroj.lmsmobile.ui.student.model.MyBooksFineFilter
+import com.saroj.lmsmobile.ui.student.model.MyBooksSortOption
+import com.saroj.lmsmobile.ui.student.model.MyBooksStatusFilter
+import com.saroj.lmsmobile.ui.student.model.MyBooksSummaryUiModel
+import com.saroj.lmsmobile.ui.student.model.MyBooksTab
 import com.saroj.lmsmobile.ui.student.model.StudentSearchBookUiModel
 import com.saroj.lmsmobile.ui.student.viewmodel.StudentDashboardViewModel
+import com.saroj.lmsmobile.ui.student.viewmodel.StudentMyBooksViewModel
 import com.saroj.lmsmobile.ui.student.viewmodel.StudentSearchBooksViewModel
 import com.saroj.lmsmobile.utils.Constants
 import kotlinx.coroutines.Dispatchers
@@ -523,6 +533,7 @@ class StudentSearchBooksFragment : Fragment() {
     private lateinit var emptyMessageText: TextView
     private lateinit var retryButton: Button
     private lateinit var progressBar: ProgressBar
+    private lateinit var bottomProgressBar: ProgressBar
     private lateinit var recyclerView: RecyclerView
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
     private lateinit var categoryChipText: TextView
@@ -545,6 +556,7 @@ class StudentSearchBooksFragment : Fragment() {
         emptyMessageText = view.findViewById(R.id.textSearchEmptyMessage)
         retryButton = view.findViewById(R.id.buttonRetryStudentSearch)
         progressBar = view.findViewById(R.id.progressSearchBooks)
+        bottomProgressBar = view.findViewById(R.id.progressSearchBooksBottom)
         recyclerView = view.findViewById(R.id.recyclerViewStudentSearchBooks)
         swipeRefreshLayout = view.findViewById(R.id.searchSwipeRefresh)
         categoryChipText = view.findViewById(R.id.textChipCategory)
@@ -617,9 +629,7 @@ class StudentSearchBooksFragment : Fragment() {
             showCategoryDialog()
         }
         view.findViewById<View>(R.id.chipAvailable)?.setOnClickListener {
-            val state = viewModel.currentFilterState()
-            viewModel.setAvailableOnly(!state.availableOnly)
-            updateFilterChips()
+            showAvailabilityDialog()
         }
         view.findViewById<View>(R.id.chipCondition)?.setOnClickListener {
             showConditionDialog()
@@ -669,11 +679,22 @@ class StudentSearchBooksFragment : Fragment() {
 
     private fun showConditionDialog() {
         val conditions = viewModel.conditions()
-        val options = listOf("Any Condition") + conditions
+        val options = listOf("All Conditions") + conditions
         AlertDialog.Builder(requireContext())
             .setTitle("Condition")
             .setItems(options.toTypedArray()) { _, index ->
                 viewModel.setCondition(if (index == 0) null else options[index])
+                updateFilterChips()
+            }
+            .show()
+    }
+
+    private fun showAvailabilityDialog() {
+        val options = StudentSearchBooksViewModel.AvailabilityFilter.entries
+        AlertDialog.Builder(requireContext())
+            .setTitle("Availability")
+            .setItems(options.map { it.label }.toTypedArray()) { _, index ->
+                viewModel.setAvailabilityFilter(options[index])
                 updateFilterChips()
             }
             .show()
@@ -693,14 +714,20 @@ class StudentSearchBooksFragment : Fragment() {
     private fun updateFilterChips() {
         val state = viewModel.currentFilterState()
         categoryChipText.text = state.category ?: "All Categories"
-        availableChipText.text = if (state.availableOnly) "Available Only" else "Available"
-        conditionChipText.text = state.condition ?: "Condition"
+        availableChipText.text = state.availabilityFilter.label
+        conditionChipText.text = state.condition ?: "All Conditions"
         sortChipText.text = state.sortOption.label
 
         view?.findViewById<View>(R.id.chipAllCategories)
             ?.setBackgroundResource(if (state.category == null) R.drawable.bg_filter_chip_active else R.drawable.bg_filter_chip)
         view?.findViewById<View>(R.id.chipAvailable)
-            ?.setBackgroundResource(if (state.availableOnly) R.drawable.bg_filter_chip_active else R.drawable.bg_filter_chip)
+            ?.setBackgroundResource(
+                if (state.availabilityFilter != StudentSearchBooksViewModel.AvailabilityFilter.ALL) {
+                    R.drawable.bg_filter_chip_active
+                } else {
+                    R.drawable.bg_filter_chip
+                }
+            )
         view?.findViewById<View>(R.id.chipCondition)
             ?.setBackgroundResource(if (state.condition != null) R.drawable.bg_filter_chip_active else R.drawable.bg_filter_chip)
         view?.findViewById<View>(R.id.chipSort)
@@ -721,6 +748,10 @@ class StudentSearchBooksFragment : Fragment() {
             foundBooksText.text = "Found $total books"
         }
 
+        viewModel.bottomLoading.observe(viewLifecycleOwner) { isLoading ->
+            bottomProgressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        }
+
         viewModel.requestResult.observe(viewLifecycleOwner) { result ->
             when (result) {
                 is NetworkResult.Success -> {
@@ -737,6 +768,8 @@ class StudentSearchBooksFragment : Fragment() {
 
     private fun showLoading() {
         progressBar.visibility = if (swipeRefreshLayout.isRefreshing) View.GONE else View.VISIBLE
+        bottomProgressBar.visibility = View.GONE
+        foundBooksText.text = "Loading books..."
         retryButton.visibility = View.GONE
         emptyState.visibility = View.GONE
         recyclerView.visibility = View.GONE
@@ -744,9 +777,9 @@ class StudentSearchBooksFragment : Fragment() {
 
     private fun showBooks(books: List<StudentSearchBookUiModel>) {
         progressBar.visibility = View.GONE
+        bottomProgressBar.visibility = View.GONE
         swipeRefreshLayout.isRefreshing = false
         adapter.submitList(books)
-        foundBooksText.text = "Found ${books.size} books"
         updateFilterChips()
         if (books.isEmpty()) {
             recyclerView.visibility = View.GONE
@@ -762,6 +795,7 @@ class StudentSearchBooksFragment : Fragment() {
 
     private fun showError(message: String) {
         progressBar.visibility = View.GONE
+        bottomProgressBar.visibility = View.GONE
         swipeRefreshLayout.isRefreshing = false
         recyclerView.visibility = View.GONE
         emptyTitleText.text = "Unable to load books"
@@ -830,11 +864,374 @@ class StudentSearchBooksFragment : Fragment() {
 }
 
 class StudentMyBooksFragment : Fragment() {
+    private lateinit var viewModel: StudentMyBooksViewModel
+    private lateinit var adapter: MyBooksAdapter
+    private lateinit var searchEditText: EditText
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var emptyState: View
+    private lateinit var emptyTitle: TextView
+    private lateinit var emptyMessage: TextView
+    private lateinit var emptyActionButton: TextView
+    private lateinit var progressBar: ProgressBar
+    private lateinit var swipeRefreshLayout: SwipeRefreshLayout
+    private lateinit var statusChipText: TextView
+    private lateinit var fineChipText: TextView
+    private lateinit var sortChipText: TextView
+    private var selectedTab: MyBooksTab = MyBooksTab.CURRENT
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View = inflater.inflate(R.layout.fragment_student_my_books, container, false)
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        searchEditText = view.findViewById(R.id.etMyBooksSearch)
+        recyclerView = view.findViewById(R.id.recyclerViewMyBooks)
+        emptyState = view.findViewById(R.id.layoutMyBooksEmpty)
+        emptyTitle = view.findViewById(R.id.textMyBooksEmptyTitle)
+        emptyMessage = view.findViewById(R.id.textMyBooksEmptyMessage)
+        emptyActionButton = view.findViewById(R.id.buttonResetMyBooksEmpty)
+        progressBar = view.findViewById(R.id.progressMyBooks)
+        swipeRefreshLayout = view.findViewById(R.id.myBooksSwipeRefresh)
+        statusChipText = view.findViewById(R.id.textChipAllStatus)
+        fineChipText = view.findViewById(R.id.textChipMyBooksFineStatus)
+        sortChipText = view.findViewById(R.id.textChipMyBooksSort)
+
+        markBottomNavActive()
+        setupViewModel()
+        setupRecyclerView()
+        setupSearch()
+        setupPullToRefresh()
+        setupFilters(view)
+        setupTabs(view)
+        observeMyBooks()
+        viewModel.loadInitial()
+    }
+
+    private fun setupViewModel() {
+        val tokenManager = (requireActivity().application as MainApplication).tokenManager
+        val apiService = RetrofitClient.getApiService(tokenManager)
+        val repository = StudentMyBooksRepository(apiService, tokenManager)
+
+        viewModel = ViewModelProvider(
+            this,
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return StudentMyBooksViewModel(repository) as T
+                }
+            }
+        )[StudentMyBooksViewModel::class.java]
+    }
+
+    private fun setupRecyclerView() {
+        adapter = MyBooksAdapter { book -> showBookDetails(book) }
+        recyclerView.layoutManager = LinearLayoutManager(requireContext())
+        recyclerView.adapter = adapter
+        recyclerView.itemAnimator = DefaultItemAnimator().apply {
+            addDuration = 180
+            changeDuration = 160
+            moveDuration = 180
+            removeDuration = 160
+        }
+    }
+
+    private fun setupSearch() {
+        searchEditText.doAfterTextChanged { editable ->
+            viewModel.setSearchQuery(editable?.toString().orEmpty())
+        }
+    }
+
+    private fun setupPullToRefresh() {
+        swipeRefreshLayout.setColorSchemeResources(
+            R.color.my_books_primary,
+            R.color.my_books_green,
+            R.color.my_books_orange
+        )
+        swipeRefreshLayout.setOnRefreshListener {
+            viewModel.refresh()
+        }
+    }
+
+    private fun setupFilters(view: View) {
+        view.findViewById<View>(R.id.chipMyBooksAllStatus)?.setOnClickListener {
+            showStatusFilterDialog()
+        }
+        view.findViewById<View>(R.id.chipMyBooksFineStatus)?.setOnClickListener {
+            showFineFilterDialog()
+        }
+        view.findViewById<View>(R.id.chipMyBooksDueDate)?.setOnClickListener {
+            showSortDialog()
+        }
+
+        val resetAction = View.OnClickListener { resetFilters() }
+        view.findViewById<View>(R.id.chipMyBooksReset)?.setOnClickListener(resetAction)
+        emptyActionButton.setOnClickListener(resetAction)
+    }
+
+    private fun setupTabs(view: View) {
+        view.findViewById<View>(R.id.tabMyBooksCurrent)?.setOnClickListener {
+            switchTab(MyBooksTab.CURRENT)
+        }
+        view.findViewById<View>(R.id.tabMyBooksHistory)?.setOnClickListener {
+            switchTab(MyBooksTab.HISTORY)
+        }
+        view.findViewById<View>(R.id.tabMyBooksDueSoon)?.setOnClickListener {
+            switchTab(MyBooksTab.DUE_SOON)
+        }
+    }
+
+    private fun observeMyBooks() {
+        viewModel.summaryState.observe(viewLifecycleOwner) { result ->
+            when (result) {
+                is NetworkResult.Success -> updateSummaryCards(result.data)
+                is NetworkResult.Error -> {
+                    Toast.makeText(requireContext(), result.message, Toast.LENGTH_SHORT).show()
+                }
+                is NetworkResult.Unauthorized -> navigateToUnauthorized()
+                is NetworkResult.Loading -> Unit
+            }
+        }
+
+        viewModel.booksState.observe(viewLifecycleOwner) { result ->
+            when (result) {
+                is NetworkResult.Loading -> showLoading()
+                is NetworkResult.Success -> showBooks(result.data)
+                is NetworkResult.Error -> showError(result.message)
+                is NetworkResult.Unauthorized -> navigateToUnauthorized()
+            }
+        }
+    }
+
+    private fun switchTab(tab: MyBooksTab) {
+        selectedTab = tab
+        updateTabStyles()
+        viewModel.switchTab(tab)
+    }
+
+    private fun showLoading() {
+        progressBar.visibility = if (swipeRefreshLayout.isRefreshing) View.GONE else View.VISIBLE
+        recyclerView.visibility = View.GONE
+        emptyState.visibility = View.GONE
+    }
+
+    private fun showBooks(books: List<MyBookUiModel>) {
+        progressBar.visibility = View.GONE
+        swipeRefreshLayout.isRefreshing = false
+        adapter.submitList(books)
+        updateFilterChips()
+        updateEmptyState(books.isEmpty(), viewModel.currentFilterState().query)
+    }
+
+    private fun showError(message: String) {
+        progressBar.visibility = View.GONE
+        swipeRefreshLayout.isRefreshing = false
+        recyclerView.visibility = View.GONE
+        emptyTitle.text = "Unable to load books"
+        emptyMessage.text = message
+        emptyActionButton.text = "Retry"
+        emptyActionButton.setOnClickListener { viewModel.refresh() }
+        emptyState.visibility = View.VISIBLE
+    }
+
+    private fun updateSummaryCards(summary: MyBooksSummaryUiModel) {
+        view?.findViewById<TextView>(R.id.textTotalIssuedValue)?.text = summary.totalIssued.toString()
+        view?.findViewById<TextView>(R.id.textCurrentlyBorrowedValue)?.text = summary.currentlyBorrowed.toString()
+        view?.findViewById<TextView>(R.id.textOverdueBooksValue)?.text = summary.overdueBooks.toString()
+        view?.findViewById<TextView>(R.id.textPendingFineValue)?.text = summary.pendingFine
+    }
+
+    private fun updateEmptyState(isEmpty: Boolean, query: String) {
+        recyclerView.visibility = if (isEmpty) View.GONE else View.VISIBLE
+        emptyState.visibility = if (isEmpty) View.VISIBLE else View.GONE
+        if (!isEmpty) return
+
+        emptyActionButton.text = "Reset Filters"
+        emptyActionButton.setOnClickListener { resetFilters() }
+        if (query.isNotBlank()) {
+            emptyTitle.text = "No books found"
+            emptyMessage.text = "Try changing your search or filters."
+            return
+        }
+
+        when (selectedTab) {
+            MyBooksTab.CURRENT -> {
+                emptyTitle.text = "No books currently borrowed."
+                emptyMessage.text = "Issued books will appear here once approved by the library."
+            }
+            MyBooksTab.HISTORY -> {
+                emptyTitle.text = "No returned books yet."
+                emptyMessage.text = "Your borrowing history will appear here after returns."
+            }
+            MyBooksTab.DUE_SOON -> {
+                emptyTitle.text = "No books due soon. Great job!"
+                emptyMessage.text = "Books approaching their due date will appear here."
+            }
+        }
+    }
+
+    private fun showStatusFilterDialog() {
+        val options = MyBooksStatusFilter.entries
+        val selectedIndex = options.indexOf(viewModel.currentFilterState().statusFilter)
+        AlertDialog.Builder(requireContext())
+            .setTitle("All Status")
+            .setSingleChoiceItems(options.map { it.label }.toTypedArray(), selectedIndex) { dialog, index ->
+                viewModel.setStatusFilter(options[index])
+                updateFilterChips()
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun showFineFilterDialog() {
+        val options = MyBooksFineFilter.entries
+        val selectedIndex = options.indexOf(viewModel.currentFilterState().fineFilter)
+        AlertDialog.Builder(requireContext())
+            .setTitle("All Fine Status")
+            .setSingleChoiceItems(options.map { it.label }.toTypedArray(), selectedIndex) { dialog, index ->
+                viewModel.setFineFilter(options[index])
+                updateFilterChips()
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun showSortDialog() {
+        val options = MyBooksSortOption.entries
+        val selectedIndex = options.indexOf(viewModel.currentFilterState().sortOption)
+        AlertDialog.Builder(requireContext())
+            .setTitle("Sort Books")
+            .setSingleChoiceItems(options.map { it.label }.toTypedArray(), selectedIndex) { dialog, index ->
+                viewModel.setSortOption(options[index])
+                updateFilterChips()
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun resetFilters() {
+        if (searchEditText.text?.isNotEmpty() == true) {
+            searchEditText.text = null
+        }
+        viewModel.resetFilters()
+        updateFilterChips()
+        Toast.makeText(requireContext(), "Filters reset.", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun updateFilterChips() {
+        val state = viewModel.currentFilterState()
+        statusChipText.text = state.statusFilter.label
+        fineChipText.text = state.fineFilter.label
+        sortChipText.text = state.sortOption.label
+
+        view?.findViewById<View>(R.id.chipMyBooksAllStatus)?.setBackgroundResource(
+            if (state.statusFilter == MyBooksStatusFilter.ALL) {
+                R.drawable.bg_my_books_chip_active
+            } else {
+                R.drawable.bg_my_books_chip
+            }
+        )
+        view?.findViewById<View>(R.id.chipMyBooksFineStatus)?.setBackgroundResource(
+            if (state.fineFilter == MyBooksFineFilter.ALL) {
+                R.drawable.bg_my_books_chip
+            } else {
+                R.drawable.bg_my_books_chip_active
+            }
+        )
+        view?.findViewById<View>(R.id.chipMyBooksDueDate)?.setBackgroundResource(
+            if (state.sortOption == MyBooksSortOption.DUE_DATE_ASC) {
+                R.drawable.bg_my_books_chip
+            } else {
+                R.drawable.bg_my_books_chip_active
+            }
+        )
+    }
+
+    private fun showBookDetails(book: MyBookUiModel) {
+        AlertDialog.Builder(requireContext())
+            .setTitle(book.title)
+            .setMessage(
+                "Author: ${book.author}\n" +
+                    "ISBN: ${book.isbn}\n" +
+                    "Status: ${book.status.displayLabel()}\n" +
+                    "Issue Date: ${book.issueDate}\n" +
+                    "Due Date: ${book.dueDate}\n" +
+                    "Return Date: ${book.returnDate ?: "-"}\n" +
+                    "Fine: ${book.fineAmount} (${book.fineStatus.displayLabel()})"
+            )
+            .setPositiveButton("Close", null)
+            .show()
+    }
+
+    private fun updateTabStyles() {
+        val tabStyles = listOf(
+            TabStyle(R.id.tabMyBooksCurrent, R.id.iconTabCurrent, R.id.textTabCurrent, MyBooksTab.CURRENT),
+            TabStyle(R.id.tabMyBooksHistory, R.id.iconTabHistory, R.id.textTabHistory, MyBooksTab.HISTORY),
+            TabStyle(R.id.tabMyBooksDueSoon, R.id.iconTabDueSoon, R.id.textTabDueSoon, MyBooksTab.DUE_SOON)
+        )
+
+        tabStyles.forEach { style ->
+            val selected = style.tab == selectedTab
+            view?.findViewById<View>(style.containerId)?.setBackgroundResource(
+                if (selected) R.drawable.bg_segment_active else 0
+            )
+            view?.findViewById<ImageView>(style.iconId)?.setColorFilter(
+                ContextCompat.getColor(
+                    requireContext(),
+                    if (selected) R.color.white else R.color.my_books_text_muted
+                )
+            )
+            view?.findViewById<TextView>(style.textId)?.setTextColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    if (selected) R.color.white else R.color.my_books_text_muted
+                )
+            )
+        }
+    }
+
+    private fun markBottomNavActive() {
+        activity
+            ?.findViewById<BottomNavigationView>(R.id.bottomNavigation)
+            ?.menu
+            ?.findItem(R.id.nav_my_books)
+            ?.isChecked = true
+    }
+
+    private fun MyBookStatus.displayLabel(): String {
+        return when (this) {
+            MyBookStatus.ISSUED -> "Issued"
+            MyBookStatus.DUE_SOON -> "Due Soon"
+            MyBookStatus.OVERDUE -> "Overdue"
+            MyBookStatus.RETURNED -> "Returned"
+        }
+    }
+
+    private fun com.saroj.lmsmobile.ui.student.model.FineStatus.displayLabel(): String {
+        return when (this) {
+            com.saroj.lmsmobile.ui.student.model.FineStatus.NONE -> "None"
+            com.saroj.lmsmobile.ui.student.model.FineStatus.UNPAID -> "Unpaid"
+            com.saroj.lmsmobile.ui.student.model.FineStatus.PAID -> "Paid"
+            com.saroj.lmsmobile.ui.student.model.FineStatus.WAIVED -> "Waived"
+        }
+    }
+
+    private fun navigateToUnauthorized() {
+        if (!isAdded) return
+        val intent = Intent(requireContext(), UnauthorizedActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+    }
+
+    private data class TabStyle(
+        val containerId: Int,
+        val iconId: Int,
+        val textId: Int,
+        val tab: MyBooksTab
+    )
 }
 
 class StudentMyFinesFragment : Fragment() {

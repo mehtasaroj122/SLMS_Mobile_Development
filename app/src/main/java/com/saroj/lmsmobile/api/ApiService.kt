@@ -14,6 +14,7 @@ import com.saroj.lmsmobile.data.models.issue.Issue
 import com.saroj.lmsmobile.data.models.issue.IssueRequest
 import com.saroj.lmsmobile.data.models.student.Student
 import com.saroj.lmsmobile.data.models.studentdashboard.StudentDashboardEnvelope
+import com.google.gson.JsonElement
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -77,7 +78,12 @@ interface ApiService {
      */
     @GET("books")
     suspend fun getBooks(
-        @Query("page") page: Int
+        @Query("page") page: Int,
+        @Query("category") category: String? = null,
+        @Query("availability") availability: String? = null,
+        @Query("condition") condition: String? = null,
+        @Query("sort") sort: String? = null,
+        @Query("per_page") pageSize: Int = 20
     ): Response<PaginatedResponse<Book>>
 
     /**
@@ -94,7 +100,12 @@ interface ApiService {
     @GET("books/search")
     suspend fun searchBooks(
         @Query("q") query: String,
-        @Query("page") page: Int
+        @Query("page") page: Int,
+        @Query("category") category: String? = null,
+        @Query("availability") availability: String? = null,
+        @Query("condition") condition: String? = null,
+        @Query("sort") sort: String? = null,
+        @Query("per_page") pageSize: Int = 20
     ): Response<PaginatedResponse<Book>>
 
     /**
@@ -218,6 +229,18 @@ interface ApiService {
      */
     @GET("student/dashboard")
     suspend fun getStudentDashboard(): Response<StudentDashboardEnvelope>
+
+    @GET("student/my-books/summary")
+    suspend fun getStudentMyBooksSummary(): Response<JsonElement>
+
+    @GET("student/my-books/current")
+    suspend fun getStudentMyBooksCurrent(): Response<JsonElement>
+
+    @GET("student/my-books/history")
+    suspend fun getStudentMyBooksHistory(): Response<JsonElement>
+
+    @GET("student/my-books/due-soon")
+    suspend fun getStudentMyBooksDueSoon(): Response<JsonElement>
 
     // ==================== OVERDUE ====================
 

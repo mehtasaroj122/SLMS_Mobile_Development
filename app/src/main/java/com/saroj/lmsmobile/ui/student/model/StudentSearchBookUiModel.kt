@@ -13,6 +13,7 @@ data class StudentSearchBookUiModel(
     val availableQuantity: Int,
     val availabilityStatus: String,
     val coverImageUrl: String?,
+    val createdAt: String?,
     val requestState: BookRequestState
 )
 

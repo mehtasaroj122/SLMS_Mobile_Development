@@ -138,4 +138,30 @@
     <color name="my_books_purple_bg">#EDE9FE</color>
     <color name="my_books_gray_bg">#F1F5F9</color>
 
+    <!-- Student My Fines Colors -->
+    <color name="my_fines_bg">#F4F8FF</color>
+    <color name="my_fines_card">#FFFFFF</color>
+    <color name="my_fines_primary">#2563EB</color>
+    <color name="my_fines_blue">#2563EB</color>
+    <color name="my_fines_text_primary">#0F172A</color>
+    <color name="my_fines_text_secondary">#475569</color>
+    <color name="my_fines_text_muted">#64748B</color>
+    <color name="my_fines_text_hint">#94A3B8</color>
+    <color name="my_fines_border">#E2E8F0</color>
+    <color name="my_fines_chip_border">#CBD5E1</color>
+    <color name="my_fines_card_border">#E5EDF7</color>
+    <color name="my_fines_green">#16A34A</color>
+    <color name="my_fines_green_bg">#DCFCE7</color>
+    <color name="my_fines_red">#EF4444</color>
+    <color name="my_fines_red_bg">#FEE2E2</color>
+    <color name="my_fines_orange">#F97316</color>
+    <color name="my_fines_orange_dark">#EA580C</color>
+    <color name="my_fines_orange_bg">#FFEDD5</color>
+    <color name="my_fines_yellow">#F59E0B</color>
+    <color name="my_fines_yellow_bg">#FEF3C7</color>
+    <color name="my_fines_purple">#8B5CF6</color>
+    <color name="my_fines_purple_bg">#EDE9FE</color>
+    <color name="my_fines_blue_bg">#DBEAFE</color>
+    <color name="my_fines_gray_bg">#F1F5F9</color>
+
 </resources>

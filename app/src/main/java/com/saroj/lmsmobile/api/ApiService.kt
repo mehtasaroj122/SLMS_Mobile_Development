@@ -242,6 +242,21 @@ interface ApiService {
     @GET("student/my-books/due-soon")
     suspend fun getStudentMyBooksDueSoon(): Response<JsonElement>
 
+    @GET("student/fines/summary")
+    suspend fun getStudentFinesSummary(): Response<JsonElement>
+
+    @GET("student/fines")
+    suspend fun getAuthenticatedStudentFines(): Response<JsonElement>
+
+    @GET("student/fines/pending")
+    suspend fun getAuthenticatedStudentPendingFines(): Response<JsonElement>
+
+    @GET("student/fines/paid")
+    suspend fun getAuthenticatedStudentPaidFines(): Response<JsonElement>
+
+    @GET("student/fines/{id}")
+    suspend fun getAuthenticatedStudentFineDetail(@Path("id") id: Int): Response<JsonElement>
+
     // ==================== OVERDUE ====================
 
     /**

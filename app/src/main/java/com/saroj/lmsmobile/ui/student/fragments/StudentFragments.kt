@@ -36,10 +36,16 @@ import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.repository.BookRepository
 import com.saroj.lmsmobile.data.repository.StudentDashboardRepository
 import com.saroj.lmsmobile.data.repository.StudentMyBooksRepository
+import com.saroj.lmsmobile.data.repository.StudentMyFinesRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
+import com.saroj.lmsmobile.ui.student.adapter.MyFinesAdapter
 import com.saroj.lmsmobile.ui.student.adapter.MyBooksAdapter
 import com.saroj.lmsmobile.ui.student.adapter.StudentSearchBookAdapter
 import com.saroj.lmsmobile.ui.student.model.BookRequestState
+import com.saroj.lmsmobile.ui.student.model.MyFineStatus
+import com.saroj.lmsmobile.ui.student.model.MyFineUiModel
+import com.saroj.lmsmobile.ui.student.model.MyFinesTab
+import com.saroj.lmsmobile.ui.student.model.MyFinesSummaryUiModel
 import com.saroj.lmsmobile.ui.student.model.MyBookStatus
 import com.saroj.lmsmobile.ui.student.model.MyBookUiModel
 import com.saroj.lmsmobile.ui.student.model.MyBooksFineFilter
@@ -50,6 +56,7 @@ import com.saroj.lmsmobile.ui.student.model.MyBooksTab
 import com.saroj.lmsmobile.ui.student.model.StudentSearchBookUiModel
 import com.saroj.lmsmobile.ui.student.viewmodel.StudentDashboardViewModel
 import com.saroj.lmsmobile.ui.student.viewmodel.StudentMyBooksViewModel
+import com.saroj.lmsmobile.ui.student.viewmodel.StudentMyFinesViewModel
 import com.saroj.lmsmobile.ui.student.viewmodel.StudentSearchBooksViewModel
 import com.saroj.lmsmobile.utils.Constants
 import kotlinx.coroutines.Dispatchers
@@ -1235,11 +1242,341 @@ class StudentMyBooksFragment : Fragment() {
 }
 
 class StudentMyFinesFragment : Fragment() {
+    private lateinit var viewModel: StudentMyFinesViewModel
+    private lateinit var adapter: MyFinesAdapter
+    private lateinit var searchEditText: EditText
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var emptyState: View
+    private lateinit var emptyTitle: TextView
+    private lateinit var emptyMessage: TextView
+    private lateinit var emptyActionButton: TextView
+    private lateinit var progressBar: ProgressBar
+    private lateinit var swipeRefreshLayout: SwipeRefreshLayout
+    private lateinit var footerText: TextView
+    private var selectedTab: MyFinesTab = MyFinesTab.ALL
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View = inflater.inflate(R.layout.fragment_student_my_fines, container, false)
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        searchEditText = view.findViewById(R.id.etMyFinesSearch)
+        recyclerView = view.findViewById(R.id.recyclerViewMyFines)
+        emptyState = view.findViewById(R.id.layoutMyFinesEmpty)
+        emptyTitle = view.findViewById(R.id.textMyFinesEmptyTitle)
+        emptyMessage = view.findViewById(R.id.textMyFinesEmptyMessage)
+        emptyActionButton = view.findViewById(R.id.buttonResetMyFinesEmpty)
+        progressBar = view.findViewById(R.id.progressMyFines)
+        swipeRefreshLayout = view.findViewById(R.id.myFinesSwipeRefresh)
+        footerText = view.findViewById(R.id.textMyFinesFooter)
+
+        markBottomNavActive()
+        setupViewModel()
+        setupRecyclerView()
+        setupSearch()
+        setupPullToRefresh()
+        setupFilters(view)
+        setupTabs(view)
+        observeMyFines()
+        viewModel.loadInitial()
+    }
+
+    private fun setupViewModel() {
+        val tokenManager = (requireActivity().application as MainApplication).tokenManager
+        val apiService = RetrofitClient.getApiService(tokenManager)
+        val repository = StudentMyFinesRepository(apiService, tokenManager)
+
+        viewModel = ViewModelProvider(
+            this,
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return StudentMyFinesViewModel(repository) as T
+                }
+            }
+        )[StudentMyFinesViewModel::class.java]
+    }
+
+    private fun setupRecyclerView() {
+        adapter = MyFinesAdapter { fine -> viewModel.loadFineDetail(fine) }
+        recyclerView.layoutManager = LinearLayoutManager(requireContext())
+        recyclerView.adapter = adapter
+        recyclerView.isNestedScrollingEnabled = false
+        recyclerView.itemAnimator = DefaultItemAnimator().apply {
+            addDuration = 180
+            changeDuration = 160
+            moveDuration = 180
+            removeDuration = 160
+        }
+    }
+
+    private fun setupSearch() {
+        searchEditText.doAfterTextChanged { editable ->
+            viewModel.setSearchQuery(editable?.toString().orEmpty())
+        }
+    }
+
+    private fun setupPullToRefresh() {
+        swipeRefreshLayout.setColorSchemeResources(
+            R.color.my_fines_primary,
+            R.color.my_fines_green,
+            R.color.my_fines_orange
+        )
+        swipeRefreshLayout.setOnRefreshListener {
+            viewModel.refresh()
+        }
+    }
+
+    private fun setupFilters(view: View) {
+        emptyActionButton.setOnClickListener { resetFilters() }
+    }
+
+    private fun setupTabs(view: View) {
+        view.findViewById<View>(R.id.tabMyFinesAll)?.setOnClickListener {
+            switchTab(MyFinesTab.ALL)
+        }
+        view.findViewById<View>(R.id.tabMyFinesPending)?.setOnClickListener {
+            switchTab(MyFinesTab.PENDING)
+        }
+        view.findViewById<View>(R.id.tabMyFinesPaid)?.setOnClickListener {
+            switchTab(MyFinesTab.PAID)
+        }
+        view.findViewById<View>(R.id.tabMyFinesWaived)?.setOnClickListener {
+            switchTab(MyFinesTab.WAIVED)
+        }
+        updateTabStyles()
+    }
+
+    private fun observeMyFines() {
+        viewModel.summaryState.observe(viewLifecycleOwner) { result ->
+            when (result) {
+                is NetworkResult.Success -> updateSummaryCards(result.data)
+                is NetworkResult.Error -> {
+                    if (!swipeRefreshLayout.isRefreshing) {
+                        Toast.makeText(requireContext(), result.message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+                is NetworkResult.Unauthorized -> navigateToUnauthorized()
+                is NetworkResult.Loading -> Unit
+            }
+        }
+
+        viewModel.finesState.observe(viewLifecycleOwner) { result ->
+            when (result) {
+                is NetworkResult.Loading -> showLoading()
+                is NetworkResult.Success -> showFines(result.data)
+                is NetworkResult.Error -> showError(result.message)
+                is NetworkResult.Unauthorized -> navigateToUnauthorized()
+            }
+        }
+
+        viewModel.fineDetailState.observe(viewLifecycleOwner) { result ->
+            when (result) {
+                is NetworkResult.Loading -> Unit
+                is NetworkResult.Success -> showFineDetails(result.data)
+                is NetworkResult.Error -> Toast.makeText(
+                    requireContext(),
+                    "Unable to load fine details: ${result.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+                is NetworkResult.Unauthorized -> navigateToUnauthorized()
+            }
+        }
+    }
+
+    private fun switchTab(tab: MyFinesTab) {
+        selectedTab = tab
+        updateTabStyles()
+        viewModel.switchTab(tab)
+    }
+
+    private fun showLoading() {
+        progressBar.visibility = if (swipeRefreshLayout.isRefreshing) View.GONE else View.VISIBLE
+        recyclerView.visibility = View.GONE
+        emptyState.visibility = View.GONE
+        footerText.visibility = View.GONE
+    }
+
+    private fun showFines(fines: List<MyFineUiModel>) {
+        progressBar.visibility = View.GONE
+        swipeRefreshLayout.isRefreshing = false
+        adapter.submitList(fines)
+        updateEmptyState(fines.isEmpty(), searchEditText.text?.toString().orEmpty().trim())
+        updateFooterCount(fines.size)
+    }
+
+    private fun showError(message: String) {
+        progressBar.visibility = View.GONE
+        swipeRefreshLayout.isRefreshing = false
+        recyclerView.visibility = View.GONE
+        footerText.visibility = View.GONE
+        emptyTitle.text = "Unable to load fines"
+        emptyMessage.text = message
+        emptyActionButton.text = "Retry"
+        emptyActionButton.setOnClickListener { viewModel.refresh() }
+        emptyState.visibility = View.VISIBLE
+    }
+
+    private fun updateSummaryCards(summary: MyFinesSummaryUiModel) {
+        view?.findViewById<TextView>(R.id.textOutstandingValue)?.text = summary.outstandingAmount
+        view?.findViewById<TextView>(R.id.textPaidValue)?.text = summary.paidAmount
+        view?.findViewById<TextView>(R.id.textWaivedValue)?.text = summary.waivedAmount
+        view?.findViewById<TextView>(R.id.textOverdueBooksValue)?.text = summary.overdueBooks.toString()
+    }
+
+    private fun showFineDetails(fine: MyFineUiModel) {
+        AlertDialog.Builder(requireContext())
+            .setTitle(fine.bookTitle)
+            .setMessage(
+                "Reason: ${fine.reason}\n" +
+                    "Due Date: ${fine.dueDate}\n" +
+                    "Days Overdue: ${fine.daysOverdue}\n" +
+                    "Fine Amount: ${fine.amount}\n" +
+                    "Status: ${fine.status.displayLabel()}"
+            )
+            .setPositiveButton("Close", null)
+            .show()
+    }
+
+    private fun updateTabStyles() {
+        val styles = listOf(
+            MyFinesTabStyle(
+                containerId = R.id.tabMyFinesAll,
+                iconId = R.id.iconTabFinesAll,
+                textId = R.id.textTabFinesAll,
+                tab = MyFinesTab.ALL,
+                inactiveIconColor = R.color.my_fines_text_muted
+            ),
+            MyFinesTabStyle(
+                containerId = R.id.tabMyFinesPending,
+                iconId = R.id.iconTabFinesPending,
+                textId = R.id.textTabFinesPending,
+                tab = MyFinesTab.PENDING,
+                inactiveIconColor = R.color.my_fines_red
+            ),
+            MyFinesTabStyle(
+                containerId = R.id.tabMyFinesPaid,
+                iconId = R.id.iconTabFinesPaid,
+                textId = R.id.textTabFinesPaid,
+                tab = MyFinesTab.PAID,
+                inactiveIconColor = R.color.my_fines_green
+            ),
+            MyFinesTabStyle(
+                containerId = R.id.tabMyFinesWaived,
+                iconId = R.id.iconTabFinesWaived,
+                textId = R.id.textTabFinesWaived,
+                tab = MyFinesTab.WAIVED,
+                inactiveIconColor = R.color.my_fines_yellow
+            )
+        )
+
+        styles.forEach { style ->
+            val selected = style.tab == selectedTab
+            view?.findViewById<View>(style.containerId)?.setBackgroundResource(
+                if (selected) R.drawable.bg_fines_segment_active else 0
+            )
+            view?.findViewById<ImageView>(style.iconId)?.setColorFilter(
+                ContextCompat.getColor(
+                    requireContext(),
+                    if (selected) R.color.white else style.inactiveIconColor
+                )
+            )
+            view?.findViewById<TextView>(style.textId)?.setTextColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    if (selected) R.color.white else R.color.my_fines_text_primary
+                )
+            )
+        }
+    }
+
+    private fun updateFooterCount(count: Int) {
+        footerText.text = if (count == 0) {
+            "Showing 0 of 0 fines"
+        } else {
+            "Showing 1 to $count of $count fines"
+        }
+        footerText.visibility = View.VISIBLE
+    }
+
+    private fun updateEmptyState(isEmpty: Boolean, query: String) {
+        recyclerView.visibility = if (isEmpty) View.GONE else View.VISIBLE
+        emptyState.visibility = if (isEmpty) View.VISIBLE else View.GONE
+        if (!isEmpty) return
+
+        emptyActionButton.text = "Reset Filters"
+        emptyActionButton.setOnClickListener { resetFilters() }
+        if (query.isNotBlank()) {
+            emptyTitle.text = "No matching fines"
+            emptyMessage.text = "Try another keyword or reset filters."
+            return
+        }
+
+        when (selectedTab) {
+            MyFinesTab.ALL -> {
+                emptyTitle.text = "No fines found"
+                emptyMessage.text = "You have no library fines. Great job!"
+            }
+            MyFinesTab.PENDING -> {
+                emptyTitle.text = "No pending fines"
+                emptyMessage.text = "You have cleared all dues."
+            }
+            MyFinesTab.PAID -> {
+                emptyTitle.text = "No paid fines yet"
+                emptyMessage.text = "Paid fines will appear here after payment."
+            }
+            MyFinesTab.WAIVED -> {
+                emptyTitle.text = "No waived fines"
+                emptyMessage.text = "Waived fines will appear here after library approval."
+            }
+        }
+    }
+
+    private fun resetFilters() {
+        if (searchEditText.text?.isNotEmpty() == true) {
+            searchEditText.setText("")
+        }
+        selectedTab = MyFinesTab.ALL
+        updateTabStyles()
+        viewModel.resetFilters()
+        viewModel.switchTab(MyFinesTab.ALL)
+        Toast.makeText(requireContext(), "Filters reset.", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun markBottomNavActive() {
+        activity
+            ?.findViewById<BottomNavigationView>(R.id.bottomNavigation)
+            ?.menu
+            ?.findItem(R.id.nav_my_fines)
+            ?.isChecked = true
+    }
+
+    private fun MyFineStatus.displayLabel(): String {
+        return when (this) {
+            MyFineStatus.PENDING -> "Pending"
+            MyFineStatus.PAID -> "Paid"
+            MyFineStatus.WAIVED -> "Waived"
+        }
+    }
+
+    private fun navigateToUnauthorized() {
+        if (!isAdded) return
+        val intent = Intent(requireContext(), UnauthorizedActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+    }
+
+    private data class MyFinesTabStyle(
+        val containerId: Int,
+        val iconId: Int,
+        val textId: Int,
+        val tab: MyFinesTab,
+        val inactiveIconColor: Int
+    )
 }
 
 class StudentProfileFragment : Fragment() {

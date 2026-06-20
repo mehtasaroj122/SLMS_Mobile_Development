@@ -20,7 +20,6 @@ import android.widget.ProgressBar
 import android.widget.ArrayAdapter
 import android.widget.Spinner
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -39,7 +38,6 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.saroj.lmsmobile.MainApplication
 import com.saroj.lmsmobile.R
 import com.saroj.lmsmobile.api.RetrofitClient
-import com.saroj.lmsmobile.data.models.notification.AppNotification
 import com.saroj.lmsmobile.data.models.studentdashboard.DashboardIssuedBook
 import com.saroj.lmsmobile.data.models.studentdashboard.DashboardNotification
 import com.saroj.lmsmobile.data.models.studentdashboard.StudentDashboardData
@@ -80,6 +78,7 @@ import com.saroj.lmsmobile.ui.student.viewmodel.StudentMyFinesViewModel
 import com.saroj.lmsmobile.ui.student.viewmodel.StudentProfileViewModel
 import com.saroj.lmsmobile.ui.student.viewmodel.StudentSearchBooksViewModel
 import com.saroj.lmsmobile.utils.Constants
+import com.saroj.lmsmobile.utils.LmsToast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -135,7 +134,7 @@ class StudentDashboardFragment : Fragment() {
             bindDashboard(view, dashboard)
             if (refreshToastPending) {
                 refreshToastPending = false
-                Toast.makeText(requireContext(), "Dashboard refreshed", Toast.LENGTH_SHORT).show()
+                LmsToast.show(requireContext(), "Dashboard refreshed")
             }
         }
 
@@ -151,11 +150,7 @@ class StudentDashboardFragment : Fragment() {
                 refreshToastPending = false
                 view.findViewById<SwipeRefreshLayout>(R.id.dashboardSwipeRefresh)?.isRefreshing = false
                 val shortMessage = message.take(120)
-                Toast.makeText(
-                    requireContext(),
-                    "Unable to load dashboard: $shortMessage",
-                    Toast.LENGTH_SHORT
-                ).show()
+                LmsToast.show(requireContext(), "Unable to load dashboard: $shortMessage")
             }
         }
 
@@ -370,11 +365,10 @@ class StudentDashboardFragment : Fragment() {
                             updateNotificationBadges(it, dashboardUnreadCount)
                         }
                     }
-                    is NetworkResult.Error -> Toast.makeText(
+                    is NetworkResult.Error -> LmsToast.show(
                         requireContext(),
-                        "Unable to mark notification as read: ${result.message}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                        "Unable to mark notification as read: ${result.message}"
+                    )
                     is NetworkResult.Unauthorized -> navigateToUnauthorized()
                     is NetworkResult.Loading -> Unit
                 }
@@ -872,7 +866,7 @@ class StudentSearchBooksFragment : Fragment() {
             view.findViewById<EditText>(R.id.etBookSearch).text = null
             viewModel.resetFilters()
             updateFilterChips()
-            Toast.makeText(requireContext(), "Filters reset.", Toast.LENGTH_SHORT).show()
+            LmsToast.show(requireContext(), "Filters reset.")
         }
 
         retryButton.setOnClickListener {
@@ -985,10 +979,10 @@ class StudentSearchBooksFragment : Fragment() {
         viewModel.requestResult.observe(viewLifecycleOwner) { result ->
             when (result) {
                 is NetworkResult.Success -> {
-                    Toast.makeText(requireContext(), result.data, Toast.LENGTH_SHORT).show()
+                    LmsToast.show(requireContext(), result.data)
                 }
                 is NetworkResult.Error -> {
-                    Toast.makeText(requireContext(), result.message, Toast.LENGTH_SHORT).show()
+                    LmsToast.show(requireContext(), result.message)
                 }
                 is NetworkResult.Unauthorized -> navigateToUnauthorized()
                 is NetworkResult.Loading -> Unit
@@ -1039,24 +1033,16 @@ class StudentSearchBooksFragment : Fragment() {
             BookRequestState.NONE,
             BookRequestState.REJECTED -> showRequestConfirmation(book)
             BookRequestState.UNAVAILABLE -> {
-                Toast.makeText(requireContext(), "This book is currently unavailable.", Toast.LENGTH_SHORT).show()
+                LmsToast.show(requireContext(), "This book is currently unavailable.")
             }
             BookRequestState.PENDING -> {
-                Toast.makeText(
-                    requireContext(),
-                    "You already have a pending request for this book.",
-                    Toast.LENGTH_SHORT
-                ).show()
+                LmsToast.show(requireContext(), "You already have a pending request for this book.")
             }
             BookRequestState.APPROVED -> {
-                Toast.makeText(
-                    requireContext(),
-                    "Your request for this book is already approved.",
-                    Toast.LENGTH_SHORT
-                ).show()
+                LmsToast.show(requireContext(), "Your request for this book is already approved.")
             }
             BookRequestState.ALREADY_ISSUED -> {
-                Toast.makeText(requireContext(), "This book is already issued to you.", Toast.LENGTH_SHORT).show()
+                LmsToast.show(requireContext(), "This book is already issued to you.")
             }
             BookRequestState.LOADING -> Unit
         }
@@ -1218,7 +1204,7 @@ class StudentMyBooksFragment : Fragment() {
             when (result) {
                 is NetworkResult.Success -> updateSummaryCards(result.data)
                 is NetworkResult.Error -> {
-                    Toast.makeText(requireContext(), result.message, Toast.LENGTH_SHORT).show()
+                    LmsToast.show(requireContext(), result.message)
                 }
                 is NetworkResult.Unauthorized -> navigateToUnauthorized()
                 is NetworkResult.Loading -> Unit
@@ -1347,7 +1333,7 @@ class StudentMyBooksFragment : Fragment() {
         }
         viewModel.resetFilters()
         updateFilterChips()
-        Toast.makeText(requireContext(), "Filters reset.", Toast.LENGTH_SHORT).show()
+        LmsToast.show(requireContext(), "Filters reset.")
     }
 
     private fun updateFilterChips() {
@@ -1579,7 +1565,7 @@ class StudentMyFinesFragment : Fragment() {
                 is NetworkResult.Success -> updateSummaryCards(result.data)
                 is NetworkResult.Error -> {
                     if (!swipeRefreshLayout.isRefreshing) {
-                        Toast.makeText(requireContext(), result.message, Toast.LENGTH_SHORT).show()
+                        LmsToast.show(requireContext(), result.message)
                     }
                 }
                 is NetworkResult.Unauthorized -> navigateToUnauthorized()
@@ -1600,11 +1586,10 @@ class StudentMyFinesFragment : Fragment() {
             when (result) {
                 is NetworkResult.Loading -> Unit
                 is NetworkResult.Success -> showFineDetails(result.data)
-                is NetworkResult.Error -> Toast.makeText(
+                is NetworkResult.Error -> LmsToast.show(
                     requireContext(),
-                    "Unable to load fine details: ${result.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
+                    "Unable to load fine details: ${result.message}"
+                )
                 is NetworkResult.Unauthorized -> navigateToUnauthorized()
             }
         }
@@ -1766,7 +1751,7 @@ class StudentMyFinesFragment : Fragment() {
         updateTabStyles()
         viewModel.resetFilters()
         viewModel.switchTab(MyFinesTab.ALL)
-        Toast.makeText(requireContext(), "Filters reset.", Toast.LENGTH_SHORT).show()
+        LmsToast.show(requireContext(), "Filters reset.")
     }
 
     private fun markBottomNavActive() {
@@ -2397,7 +2382,7 @@ class StudentProfileFragment : Fragment() {
     }
 
     private fun showToast(message: String) {
-        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+        LmsToast.show(requireContext(), message)
     }
 
     private fun loadProfileImages(rawUrl: String?) {

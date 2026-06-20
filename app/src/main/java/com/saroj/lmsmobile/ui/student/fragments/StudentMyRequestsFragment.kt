@@ -9,7 +9,6 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.widget.NestedScrollView
 import androidx.core.content.ContextCompat
@@ -34,6 +33,7 @@ import com.saroj.lmsmobile.ui.student.model.MyRequestUiModel
 import com.saroj.lmsmobile.ui.student.model.MyRequestsSummaryUiModel
 import com.saroj.lmsmobile.ui.student.model.MyRequestsTab
 import com.saroj.lmsmobile.ui.student.viewmodel.StudentMyRequestsViewModel
+import com.saroj.lmsmobile.utils.LmsToast
 
 class StudentMyRequestsFragment : Fragment() {
 
@@ -185,7 +185,7 @@ class StudentMyRequestsFragment : Fragment() {
                 is NetworkResult.Success -> updateSummaryCards(result.data)
                 is NetworkResult.Error -> {
                     if (!swipeRefreshLayout.isRefreshing) {
-                        Toast.makeText(requireContext(), result.message, Toast.LENGTH_SHORT).show()
+                        LmsToast.show(requireContext(), result.message)
                     }
                 }
                 is NetworkResult.Unauthorized -> navigateToUnauthorized()
@@ -206,11 +206,10 @@ class StudentMyRequestsFragment : Fragment() {
             when (result) {
                 is NetworkResult.Loading -> Unit
                 is NetworkResult.Success -> showRequestDetails(result.data)
-                is NetworkResult.Error -> Toast.makeText(
+                is NetworkResult.Error -> LmsToast.show(
                     requireContext(),
-                    "Unable to load request details: ${result.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
+                    "Unable to load request details: ${result.message}"
+                )
                 is NetworkResult.Unauthorized -> navigateToUnauthorized()
             }
         }
@@ -218,16 +217,11 @@ class StudentMyRequestsFragment : Fragment() {
         viewModel.cancelState.observe(viewLifecycleOwner) { result ->
             when (result) {
                 is NetworkResult.Loading -> Unit
-                is NetworkResult.Success -> Toast.makeText(
+                is NetworkResult.Success -> LmsToast.show(requireContext(), result.data.message)
+                is NetworkResult.Error -> LmsToast.show(
                     requireContext(),
-                    result.data.message,
-                    Toast.LENGTH_SHORT
-                ).show()
-                is NetworkResult.Error -> Toast.makeText(
-                    requireContext(),
-                    "Unable to cancel request: ${result.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
+                    "Unable to cancel request: ${result.message}"
+                )
                 is NetworkResult.Unauthorized -> navigateToUnauthorized()
             }
         }
@@ -412,7 +406,7 @@ class StudentMyRequestsFragment : Fragment() {
         updateTabStyles()
         viewModel.resetFilters()
         if (showToast) {
-            Toast.makeText(requireContext(), "Filters reset.", Toast.LENGTH_SHORT).show()
+            LmsToast.show(requireContext(), "Filters reset.")
         }
     }
 

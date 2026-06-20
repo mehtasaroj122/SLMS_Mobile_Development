@@ -10,7 +10,6 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
@@ -29,6 +28,7 @@ import com.saroj.lmsmobile.api.RetrofitClient
 import com.saroj.lmsmobile.data.models.notification.AppNotification
 import com.saroj.lmsmobile.data.repository.NotificationRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
+import com.saroj.lmsmobile.utils.LmsToast
 import java.util.Locale
 
 class StudentNotificationsFragment : Fragment() {
@@ -218,7 +218,7 @@ class StudentNotificationsFragment : Fragment() {
 
         viewModel.actionMessage.observe(viewLifecycleOwner) { message ->
             if (!message.isNullOrBlank()) {
-                Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                LmsToast.show(requireContext(), message)
                 viewModel.clearActionMessage()
             }
         }

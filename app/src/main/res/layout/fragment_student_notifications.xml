@@ -60,7 +60,7 @@
                         android:layout_height="wrap_content"
                         android:text="Notifications"
                         android:textColor="@color/notifications_text_primary"
-                        android:textSize="32sp"
+                        android:textSize="24sp"
                         android:textStyle="bold" />
 
                     <TextView

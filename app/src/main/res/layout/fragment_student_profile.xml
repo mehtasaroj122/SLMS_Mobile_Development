@@ -58,7 +58,7 @@
                     android:layout_height="wrap_content"
                     android:text="Profile"
                     android:textColor="@color/profile_text_primary"
-                    android:textSize="32sp"
+                    android:textSize="24sp"
                     android:textStyle="bold" />
 
                 <TextView

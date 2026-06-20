@@ -3,7 +3,7 @@ package com.saroj.lmsmobile.ui.staff
 import android.os.Bundle
 import android.view.Menu
 import android.view.View
-import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -30,7 +30,7 @@ import com.saroj.lmsmobile.ui.staff.fragments.StaffStudentsScreen
  * - Bottom navigation to switch between modules
  * - Fragment-based navigation for each module
  * - Staff Portal header matching the Student Portal design system
- * - Static UI-only screens with placeholder content
+ * - Backend-connected dashboard with supporting staff portal screens
  *
  * Navigation:
  * BottomNavigationView switches between fragments:
@@ -196,8 +196,12 @@ class StaffDashboardActivity : BaseActivity() {
         bottomNavigation.selectedItemId = R.id.nav_issue_book
     }
 
-    fun openReturnBook() {
+    fun openReturnBook(issueId: Int? = null) {
         bottomNavigation.selectedItemId = R.id.nav_return_book
+    }
+
+    fun openFines() {
+        bottomNavigation.selectedItemId = R.id.nav_fines
     }
 
     fun openBookRequests() {
@@ -216,8 +220,15 @@ class StaffDashboardActivity : BaseActivity() {
         loadSecondaryFragment(StaffNotificationsScreen())
     }
 
-    fun showLogoutPlaceholder() {
-        Toast.makeText(this, "Logout action placeholder", Toast.LENGTH_SHORT).show()
+    fun showLogoutConfirmation() {
+        AlertDialog.Builder(this)
+            .setTitle("Logout?")
+            .setMessage("Are you sure you want to sign out from this device?")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Logout") { _, _ ->
+                logout()
+            }
+            .show()
     }
 
     private fun markBottomNavItemChecked(itemId: Int) {

@@ -14,6 +14,8 @@ import com.saroj.lmsmobile.data.models.issue.Issue
 import com.saroj.lmsmobile.data.models.issue.IssueRequest
 import com.saroj.lmsmobile.data.models.profile.ChangePasswordRequest
 import com.saroj.lmsmobile.data.models.profile.ProfileUpdateRequest
+import com.saroj.lmsmobile.data.models.staffdashboard.RejectBookRequestBody
+import com.saroj.lmsmobile.data.models.staffdashboard.StaffDashboardEnvelope
 import com.saroj.lmsmobile.data.models.student.Student
 import com.saroj.lmsmobile.data.models.studentdashboard.StudentDashboardEnvelope
 import com.google.gson.JsonElement
@@ -266,6 +268,18 @@ interface ApiService {
      */
     @GET("student/dashboard")
     suspend fun getStudentDashboard(): Response<StudentDashboardEnvelope>
+
+    @GET("staff/dashboard")
+    suspend fun getStaffDashboard(): Response<StaffDashboardEnvelope>
+
+    @POST("book-requests/{id}/approve")
+    suspend fun approveBookRequest(@Path("id") id: Int): Response<JsonElement>
+
+    @POST("book-requests/{id}/reject")
+    suspend fun rejectBookRequest(
+        @Path("id") id: Int,
+        @Body request: RejectBookRequestBody = RejectBookRequestBody()
+    ): Response<JsonElement>
 
     @GET("student/my-books/summary")
     suspend fun getStudentMyBooksSummary(): Response<JsonElement>

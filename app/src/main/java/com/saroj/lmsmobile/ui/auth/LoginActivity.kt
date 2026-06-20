@@ -240,8 +240,9 @@ class LoginActivity : AppCompatActivity() {
      * @param userRole The role of the logged-in user (admin, staff, student)
      */
     private fun navigateToDashboard(userRole: String) {
-        android.util.Log.d("LoginActivity", "Navigating to dashboard for role: $userRole")
-        val intent = when (userRole) {
+        val normalizedRole = Constants.normalizeRole(userRole)
+        android.util.Log.d("LoginActivity", "Navigating to dashboard for role: $userRole normalized as: $normalizedRole")
+        val intent = when (normalizedRole) {
             Constants.ROLE_ADMIN -> {
                 android.util.Log.d("LoginActivity", "Target activity: AdminDashboardActivity")
                 Intent(this, AdminDashboardActivity::class.java)

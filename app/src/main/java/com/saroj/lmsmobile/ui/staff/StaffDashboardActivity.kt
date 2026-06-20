@@ -1,15 +1,27 @@
 package com.saroj.lmsmobile.ui.staff
 
 import android.os.Bundle
+import android.view.Menu
+import android.view.View
+import android.widget.Toast
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.saroj.lmsmobile.R
 import com.saroj.lmsmobile.ui.components.BaseActivity
-import com.saroj.lmsmobile.ui.staff.fragments.StaffDashboardFragment
-import com.saroj.lmsmobile.ui.staff.fragments.StaffBooksFragment
-import com.saroj.lmsmobile.ui.staff.fragments.StaffStudentsFragment
-import com.saroj.lmsmobile.ui.staff.fragments.StaffIssuesFragment
-import com.saroj.lmsmobile.ui.staff.fragments.StaffFinesFragment
+import com.saroj.lmsmobile.ui.staff.fragments.StaffBookRequestsScreen
+import com.saroj.lmsmobile.ui.staff.fragments.StaffDashboardScreen
+import com.saroj.lmsmobile.ui.staff.fragments.StaffFinesScreen
+import com.saroj.lmsmobile.ui.staff.fragments.StaffIssueBookScreen
+import com.saroj.lmsmobile.ui.staff.fragments.StaffMoreScreen
+import com.saroj.lmsmobile.ui.staff.fragments.StaffNotificationsScreen
+import com.saroj.lmsmobile.ui.staff.fragments.StaffProfileScreen
+import com.saroj.lmsmobile.ui.staff.fragments.StaffReturnBookScreen
+import com.saroj.lmsmobile.ui.staff.fragments.StaffStudentsScreen
 
 /**
  * StaffDashboardActivity is the main activity for staff users.
@@ -17,43 +29,47 @@ import com.saroj.lmsmobile.ui.staff.fragments.StaffFinesFragment
  * Features:
  * - Bottom navigation to switch between modules
  * - Fragment-based navigation for each module
- * - Dashboard, Books, Students, Issues, and Fines sections
- * - Consistent toolbar with logout option
+ * - Staff Portal header matching the Student Portal design system
+ * - Static UI-only screens with placeholder content
  *
  * Navigation:
  * BottomNavigationView switches between fragments:
- * - Dashboard (statistics and summaries)
- * - Books (view and manage library books)
- * - Students (view student details)
- * - Issues (issue and return books)
- * - Fines (manage student fines)
- *
- * Architecture:
- * Activity holds fragments and manages bottom navigation.
- * Each fragment has its own ViewModel and Repository.
+ * - Dashboard
+ * - Issue Book
+ * - Return Book
+ * - Fines
+ * - More
  */
 class StaffDashboardActivity : BaseActivity() {
 
     private lateinit var bottomNavigation: BottomNavigationView
+    private var lastSelectedNavItemId = R.id.nav_dashboard
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_staff_dashboard)
-
-        // Set up toolbar
-        setSupportActionBar(findViewById(R.id.toolbar))
-        supportActionBar?.title = "Staff Dashboard"
+        lastSelectedNavItemId = savedInstanceState?.getInt(KEY_LAST_SELECTED_NAV_ITEM)
+            ?: R.id.nav_dashboard
 
         // Initialize views
         initializeViews()
+        setupStaffHeader()
 
         // Set up navigation
         setupBottomNavigation()
+        setupBackStackNavigation()
 
         // Load default fragment
         if (savedInstanceState == null) {
-            loadFragment(StaffDashboardFragment())
+            loadFragment(StaffDashboardScreen())
         }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean = false
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putInt(KEY_LAST_SELECTED_NAV_ITEM, lastSelectedNavItemId)
+        super.onSaveInstanceState(outState)
     }
 
     /**
@@ -63,6 +79,46 @@ class StaffDashboardActivity : BaseActivity() {
         bottomNavigation = findViewById(R.id.bottomNavigation)
     }
 
+    @Suppress("DEPRECATION")
+    private fun setupStaffHeader() {
+        window.statusBarColor = ContextCompat.getColor(this, R.color.student_portal_header_start)
+        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
+
+        val header = findViewById<View>(R.id.studentPortalHeader)
+        val initialHeaderLeft = header.paddingLeft
+        val initialHeaderTop = header.paddingTop
+        val initialHeaderRight = header.paddingRight
+        val initialHeaderBottom = header.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(header) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(
+                initialHeaderLeft,
+                initialHeaderTop + systemBars.top,
+                initialHeaderRight,
+                initialHeaderBottom
+            )
+            insets
+        }
+
+        val initialNavLeft = bottomNavigation.paddingLeft
+        val initialNavTop = bottomNavigation.paddingTop
+        val initialNavRight = bottomNavigation.paddingRight
+        val initialNavBottom = bottomNavigation.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(bottomNavigation) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(
+                initialNavLeft,
+                initialNavTop,
+                initialNavRight,
+                initialNavBottom + systemBars.bottom
+            )
+            insets
+        }
+
+        ViewCompat.requestApplyInsets(header)
+        ViewCompat.requestApplyInsets(bottomNavigation)
+    }
+
     /**
      * Sets up bottom navigation listener.
      */
@@ -70,26 +126,39 @@ class StaffDashboardActivity : BaseActivity() {
         bottomNavigation.setOnItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.nav_dashboard -> {
-                    loadFragment(StaffDashboardFragment())
+                    lastSelectedNavItemId = menuItem.itemId
+                    loadFragment(StaffDashboardScreen())
                     true
                 }
-                R.id.nav_books -> {
-                    loadFragment(StaffBooksFragment())
+                R.id.nav_issue_book -> {
+                    lastSelectedNavItemId = menuItem.itemId
+                    loadFragment(StaffIssueBookScreen())
                     true
                 }
-                R.id.nav_students -> {
-                    loadFragment(StaffStudentsFragment())
-                    true
-                }
-                R.id.nav_issues -> {
-                    loadFragment(StaffIssuesFragment())
+                R.id.nav_return_book -> {
+                    lastSelectedNavItemId = menuItem.itemId
+                    loadFragment(StaffReturnBookScreen())
                     true
                 }
                 R.id.nav_fines -> {
-                    loadFragment(StaffFinesFragment())
+                    lastSelectedNavItemId = menuItem.itemId
+                    loadFragment(StaffFinesScreen())
+                    true
+                }
+                R.id.nav_more -> {
+                    lastSelectedNavItemId = menuItem.itemId
+                    loadFragment(StaffMoreScreen())
                     true
                 }
                 else -> false
+            }
+        }
+    }
+
+    private fun setupBackStackNavigation() {
+        supportFragmentManager.addOnBackStackChangedListener {
+            if (supportFragmentManager.backStackEntryCount == 0) {
+                markBottomNavItemChecked(lastSelectedNavItemId)
             }
         }
     }
@@ -99,6 +168,7 @@ class StaffDashboardActivity : BaseActivity() {
      * @param fragment The fragment to load
      */
     private fun loadFragment(fragment: Fragment) {
+        supportFragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
         supportFragmentManager.beginTransaction()
             .setCustomAnimations(
                 android.R.anim.fade_in,
@@ -106,6 +176,56 @@ class StaffDashboardActivity : BaseActivity() {
             )
             .replace(R.id.fragmentContainer, fragment)
             .commit()
+    }
+
+    private fun loadSecondaryFragment(fragment: Fragment) {
+        markBottomNavItemChecked(R.id.nav_more)
+        supportFragmentManager.beginTransaction()
+            .setCustomAnimations(
+                android.R.anim.fade_in,
+                android.R.anim.fade_out,
+                android.R.anim.fade_in,
+                android.R.anim.fade_out
+            )
+            .replace(R.id.fragmentContainer, fragment)
+            .addToBackStack(fragment::class.java.simpleName)
+            .commit()
+    }
+
+    fun openIssueBook() {
+        bottomNavigation.selectedItemId = R.id.nav_issue_book
+    }
+
+    fun openReturnBook() {
+        bottomNavigation.selectedItemId = R.id.nav_return_book
+    }
+
+    fun openBookRequests() {
+        loadSecondaryFragment(StaffBookRequestsScreen())
+    }
+
+    fun openStudents() {
+        loadSecondaryFragment(StaffStudentsScreen())
+    }
+
+    fun openProfile() {
+        loadSecondaryFragment(StaffProfileScreen())
+    }
+
+    fun openNotifications() {
+        loadSecondaryFragment(StaffNotificationsScreen())
+    }
+
+    fun showLogoutPlaceholder() {
+        Toast.makeText(this, "Logout action placeholder", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun markBottomNavItemChecked(itemId: Int) {
+        bottomNavigation.menu.findItem(itemId)?.isChecked = true
+    }
+
+    private companion object {
+        const val KEY_LAST_SELECTED_NAV_ITEM = "last_selected_nav_item"
     }
 }
 

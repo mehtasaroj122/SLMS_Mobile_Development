@@ -5,20 +5,20 @@
         android:icon="@drawable/ic_dashboard"
         android:title="Dashboard" />
     <item
-        android:id="@+id/nav_books"
-        android:icon="@drawable/ic_books"
-        android:title="Books" />
-    <item
-        android:id="@+id/nav_students"
-        android:icon="@drawable/ic_student"
-        android:title="Students" />
-    <item
-        android:id="@+id/nav_issues"
+        android:id="@+id/nav_issue_book"
         android:icon="@drawable/ic_issue"
-        android:title="Issues" />
+        android:title="Issue Book" />
+    <item
+        android:id="@+id/nav_return_book"
+        android:icon="@drawable/ic_receipt"
+        android:title="Return Book" />
     <item
         android:id="@+id/nav_fines"
         android:icon="@drawable/ic_fine"
         android:title="Fines" />
+    <item
+        android:id="@+id/nav_more"
+        android:icon="@drawable/ic_more"
+        android:title="More" />
 </menu>
 

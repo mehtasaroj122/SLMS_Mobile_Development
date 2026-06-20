@@ -66,6 +66,15 @@ object Constants {
     const val ROLE_STAFF = "staff"
     const val ROLE_STUDENT = "student"
 
+    fun normalizeRole(role: String?): String {
+        return when (role?.trim()?.lowercase()?.replace("-", "_")?.replace(" ", "_")) {
+            ROLE_ADMIN, "administrator" -> ROLE_ADMIN
+            ROLE_STAFF, "library_staff", "staff_member", "librarian" -> ROLE_STAFF
+            ROLE_STUDENT, "member" -> ROLE_STUDENT
+            else -> role?.trim()?.lowercase().orEmpty()
+        }
+    }
+
     // ==================== Network Configuration ====================
     const val NETWORK_TIMEOUT = 30L // seconds
     const val CONNECT_TIMEOUT = 15L // seconds

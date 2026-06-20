@@ -1,6 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Base.Theme.LMSMobile" parent="Theme.AppCompat.Light.NoActionBar">
+    <style name="Base.Theme.LMSMobile" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary_color</item>
         <item name="colorPrimaryDark">@color/primary_dark</item>
         <item name="colorAccent">@color/accent_color</item>
@@ -18,7 +18,7 @@
     </style>
 
     <!-- Splash Theme -->
-    <style name="Theme.LMSMobile.Splash" parent="Theme.AppCompat.NoActionBar">
+    <style name="Theme.LMSMobile.Splash" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
         <item name="android:windowFullscreen">false</item>
@@ -48,6 +48,24 @@
     <style name="CardStyle">
         <item name="android:background">@drawable/bg_card</item>
         <item name="android:elevation">4dp</item>
+    </style>
+
+    <style name="StaffPortalPrimaryButton">
+        <item name="android:background">@drawable/bg_profile_primary_button</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:gravity">center</item>
+        <item name="android:minHeight">46dp</item>
+    </style>
+
+    <style name="StaffPortalOutlineButton">
+        <item name="android:background">@drawable/bg_profile_outline_button</item>
+        <item name="android:textColor">@color/profile_primary</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:gravity">center</item>
+        <item name="android:minHeight">46dp</item>
     </style>
 
 </resources>

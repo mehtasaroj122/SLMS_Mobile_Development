@@ -61,15 +61,16 @@ class AuthRepository(
                 val loginResponse = response.body()
                 android.util.Log.d("AuthRepository", "Login successful: $loginResponse")
                 if (loginResponse != null) {
+                    val normalizedRole = Constants.normalizeRole(loginResponse.user.role)
                     // Save token and user info to DataStore
                     tokenManager.saveToken(loginResponse.access_token)
                     tokenManager.saveUserInfo(
                         userId = loginResponse.user.id.toString(),
                         userName = loginResponse.user.name,
                         userEmail = loginResponse.user.email,
-                        userRole = loginResponse.user.role
+                        userRole = normalizedRole
                     )
-                    emit(NetworkResult.Success(loginResponse))
+                    emit(NetworkResult.Success(loginResponse.copy(user = loginResponse.user.copy(role = normalizedRole))))
                 } else {
                     emit(NetworkResult.Error("Empty response from server", response.code()))
                 }

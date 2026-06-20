@@ -81,7 +81,7 @@ class SplashActivity : AppCompatActivity() {
                     navigateToLogin()
                 } else {
                     // Token exists, get user role and navigate to dashboard
-                    val userRole = tokenManager.getUserRole().firstOrNull()
+                    val userRole = Constants.normalizeRole(tokenManager.getUserRole().firstOrNull())
 
                     when (userRole) {
                         Constants.ROLE_ADMIN -> navigateToAdminDashboard()

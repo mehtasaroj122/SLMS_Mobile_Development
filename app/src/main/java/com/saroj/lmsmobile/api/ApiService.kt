@@ -294,6 +294,26 @@ interface ApiService {
     @GET("student/fines/{id}")
     suspend fun getAuthenticatedStudentFineDetail(@Path("id") id: Int): Response<JsonElement>
 
+    // ==================== NOTIFICATIONS ====================
+
+    @GET("notifications")
+    suspend fun getNotifications(): Response<JsonElement>
+
+    @GET("notifications/unread")
+    suspend fun getUnreadNotifications(): Response<JsonElement>
+
+    @GET("notifications/count")
+    suspend fun getNotificationCount(): Response<JsonElement>
+
+    @POST("notifications/{id}/read")
+    suspend fun markNotificationAsRead(@Path("id") id: Int): Response<JsonElement>
+
+    @POST("notifications/read-all")
+    suspend fun markAllNotificationsAsRead(): Response<JsonElement>
+
+    @DELETE("notifications/{id}")
+    suspend fun deleteNotification(@Path("id") id: Int): Response<JsonElement>
+
     // ==================== OVERDUE ====================
 
     /**

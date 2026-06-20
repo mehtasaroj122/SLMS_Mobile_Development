@@ -144,16 +144,18 @@
         </LinearLayout>
 
         <TextView
+            android:id="@+id/textMoreNotificationsBadge"
             android:layout_width="wrap_content"
             android:layout_height="20dp"
             android:layout_marginEnd="10dp"
             android:background="@drawable/bg_notification_badge"
             android:gravity="center"
             android:minWidth="20dp"
-            android:text="4"
+            android:text=""
             android:textColor="@color/white"
             android:textSize="11sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:visibility="gone" />
 
         <ImageView
             android:layout_width="20dp"

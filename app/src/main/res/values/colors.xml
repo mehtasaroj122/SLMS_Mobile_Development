@@ -229,4 +229,24 @@
     <color name="profile_gray_bg">#F1F5F9</color>
     <color name="profile_disabled">#9CA3AF</color>
 
+    <!-- Student Notifications Colors -->
+    <color name="notifications_bg">#F4F8FF</color>
+    <color name="notifications_card">#FFFFFF</color>
+    <color name="notifications_primary">#2563EB</color>
+    <color name="notifications_primary_bg">#DBEAFE</color>
+    <color name="notifications_text_primary">#0F172A</color>
+    <color name="notifications_text_secondary">#475569</color>
+    <color name="notifications_text_muted">#64748B</color>
+    <color name="notifications_border">#E2E8F0</color>
+    <color name="notifications_card_border">#E5EDF7</color>
+    <color name="notifications_green">#16A34A</color>
+    <color name="notifications_green_bg">#DCFCE7</color>
+    <color name="notifications_red">#EF4444</color>
+    <color name="notifications_red_bg">#FEE2E2</color>
+    <color name="notifications_orange">#F97316</color>
+    <color name="notifications_orange_bg">#FFEDD5</color>
+    <color name="notifications_purple">#7C3AED</color>
+    <color name="notifications_purple_bg">#EDE9FE</color>
+    <color name="notifications_gray_bg">#F1F5F9</color>
+
 </resources>

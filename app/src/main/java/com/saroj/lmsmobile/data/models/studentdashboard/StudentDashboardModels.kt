@@ -69,6 +69,7 @@ data class DashboardNotification(
     val id: Int?,
     val title: String?,
     val message: String?,
+    val type: String?,
     val created_at: String?,
     val read_at: String?
 )

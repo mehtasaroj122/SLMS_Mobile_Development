@@ -4,7 +4,6 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
@@ -18,6 +17,7 @@ import com.saroj.lmsmobile.ui.student.fragments.StudentMyBooksFragment
 import com.saroj.lmsmobile.ui.student.fragments.StudentMyFinesFragment
 import com.saroj.lmsmobile.ui.student.fragments.StudentProfileFragment
 import com.saroj.lmsmobile.ui.student.fragments.StudentSearchBooksFragment
+import com.saroj.lmsmobile.ui.student.notifications.StudentNotificationsFragment
 
 /**
  * StudentDashboardActivity is the main activity for student users.
@@ -140,8 +140,9 @@ class StudentDashboardActivity : BaseActivity() {
         }
 
         view.findViewById<View>(R.id.rowNotifications).setOnClickListener {
+            openedSecondaryScreen = true
             dialog.dismiss()
-            Toast.makeText(this, "Notifications coming soon", Toast.LENGTH_SHORT).show()
+            openNotifications()
         }
 
         view.findViewById<View>(R.id.rowMyRequests).setOnClickListener {
@@ -203,7 +204,10 @@ class StudentDashboardActivity : BaseActivity() {
      * Loads a screen opened outside the bottom navigation while keeping the nav visible.
      */
     private fun loadSecondaryFragment(fragment: Fragment) {
-        if (fragment is StudentMyRequestsFragment || fragment is StudentProfileFragment) {
+        if (fragment is StudentMyRequestsFragment ||
+            fragment is StudentProfileFragment ||
+            fragment is StudentNotificationsFragment
+        ) {
             markBottomNavItemChecked(R.id.nav_more)
         }
         supportFragmentManager.beginTransaction()
@@ -234,6 +238,15 @@ class StudentDashboardActivity : BaseActivity() {
             return
         }
         loadSecondaryFragment(StudentProfileFragment())
+    }
+
+    fun openNotifications() {
+        val currentFragment = supportFragmentManager.findFragmentById(R.id.fragmentContainer)
+        if (currentFragment is StudentNotificationsFragment) {
+            markBottomNavItemChecked(R.id.nav_more)
+            return
+        }
+        loadSecondaryFragment(StudentNotificationsFragment())
     }
 
     private fun markBottomNavItemChecked(itemId: Int) {

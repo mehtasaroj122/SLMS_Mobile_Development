@@ -86,6 +86,7 @@
                         android:orientation="vertical">
 
                         <TextView
+                            android:id="@+id/textDashboardGreeting"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Good Morning"
@@ -132,10 +133,14 @@
                     </LinearLayout>
 
                     <FrameLayout
+                        android:id="@+id/buttonHeaderNotifications"
                         android:layout_width="56dp"
                         android:layout_height="56dp"
                         android:layout_marginStart="10dp"
-                        android:background="@drawable/bg_bell_container">
+                        android:background="@drawable/bg_bell_container"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
 
                         <ImageView
                             android:layout_width="26dp"
@@ -145,13 +150,23 @@
                             android:src="@drawable/ic_bell"
                             app:tint="@color/white" />
 
-                        <View
-                            android:layout_width="12dp"
-                            android:layout_height="12dp"
+                        <TextView
+                            android:id="@+id/textHeaderNotificationBadge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="20dp"
                             android:layout_gravity="top|end"
-                            android:layout_marginTop="10dp"
-                            android:layout_marginEnd="11dp"
-                            android:background="@drawable/bg_yellow_dot" />
+                            android:layout_marginTop="6dp"
+                            android:layout_marginEnd="6dp"
+                            android:background="@drawable/bg_notification_badge"
+                            android:gravity="center"
+                            android:minWidth="20dp"
+                            android:paddingStart="5dp"
+                            android:paddingEnd="5dp"
+                            android:text="0"
+                            android:textColor="@color/white"
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            android:visibility="gone" />
                     </FrameLayout>
                 </LinearLayout>
 

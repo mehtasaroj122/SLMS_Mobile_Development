@@ -1,7 +1,9 @@
 package com.saroj.lmsmobile.ui.student.fragments
 
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.BitmapFactory
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -33,15 +35,18 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.saroj.lmsmobile.MainApplication
 import com.saroj.lmsmobile.R
 import com.saroj.lmsmobile.api.RetrofitClient
+import com.saroj.lmsmobile.data.models.notification.AppNotification
 import com.saroj.lmsmobile.data.models.studentdashboard.DashboardIssuedBook
 import com.saroj.lmsmobile.data.models.studentdashboard.DashboardNotification
 import com.saroj.lmsmobile.data.models.studentdashboard.StudentDashboardData
 import com.saroj.lmsmobile.data.models.studentdashboard.StudentDashboardResponse
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.repository.BookRepository
+import com.saroj.lmsmobile.data.repository.NotificationRepository
 import com.saroj.lmsmobile.data.repository.StudentDashboardRepository
 import com.saroj.lmsmobile.data.repository.StudentMyBooksRepository
 import com.saroj.lmsmobile.data.repository.StudentMyFinesRepository
@@ -52,6 +57,7 @@ import com.saroj.lmsmobile.ui.student.StudentDashboardActivity
 import com.saroj.lmsmobile.ui.student.adapter.MyFinesAdapter
 import com.saroj.lmsmobile.ui.student.adapter.MyBooksAdapter
 import com.saroj.lmsmobile.ui.student.adapter.StudentSearchBookAdapter
+import com.saroj.lmsmobile.ui.student.notifications.NotificationsAdapter
 import com.saroj.lmsmobile.ui.student.model.BookRequestState
 import com.saroj.lmsmobile.ui.student.model.MyFineStatus
 import com.saroj.lmsmobile.ui.student.model.MyFineUiModel
@@ -86,7 +92,10 @@ import java.util.concurrent.TimeUnit
 
 class StudentDashboardFragment : Fragment() {
     private lateinit var viewModel: StudentDashboardViewModel
+    private lateinit var notificationRepository: NotificationRepository
     private var refreshToastPending = false
+    private var dashboardNotifications: List<DashboardNotification> = emptyList()
+    private var dashboardUnreadCount = 0
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -108,6 +117,7 @@ class StudentDashboardFragment : Fragment() {
         val tokenManager = (requireActivity().application as MainApplication).tokenManager
         val apiService = RetrofitClient.getApiService(tokenManager)
         val repository = StudentDashboardRepository(apiService, tokenManager)
+        notificationRepository = NotificationRepository(apiService, tokenManager)
 
         viewModel = ViewModelProvider(
             this,
@@ -165,6 +175,7 @@ class StudentDashboardFragment : Fragment() {
         bindCurrentlyIssued(view, data.currently_issued.orEmpty(), data.stats?.issued_books)
         bindDueSoon(view, data.due_soon.orEmpty())
         bindNotifications(view, data.latest_notifications.orEmpty())
+        loadNotificationCount()
         bindPrivileges(view, data)
     }
 
@@ -186,6 +197,7 @@ class StudentDashboardFragment : Fragment() {
     private fun bindStudent(view: View, dashboard: StudentDashboardData) {
         val student = dashboard.student
         val name = student?.name.orFallback("Student")
+        view.setText(R.id.textDashboardGreeting, greetingForCurrentTime())
         view.setText(R.id.textStudentName, name)
         view.setText(R.id.textStudentInitials, getInitials(name))
         view.setText(R.id.textStudentRoll, student?.roll_no.orFallback("STU-001-001"))
@@ -244,7 +256,11 @@ class StudentDashboardFragment : Fragment() {
     }
 
     private fun bindNotifications(view: View, notifications: List<DashboardNotification>) {
-        view.setText(R.id.textNotificationsCount, notifications.size.toString())
+        dashboardNotifications = notifications
+        if (dashboardUnreadCount == 0) {
+            dashboardUnreadCount = notifications.count { it.read_at.isNullOrBlank() }
+        }
+        updateNotificationBadges(view, dashboardUnreadCount)
         view.setVisibility(R.id.textNotificationsEmpty, notifications.isEmpty())
 
         val itemIds = listOf(R.id.notificationItem1, R.id.notificationItem2, R.id.notificationItem3)
@@ -261,6 +277,107 @@ class StudentDashboardFragment : Fragment() {
                 view.setText(messageIds[index], notification.message.orFallback("-"))
                 view.setText(timeIds[index], formatRelativeDate(notification.created_at))
                 view.setVisibility(unreadIds[index], notification.read_at.isNullOrBlank())
+                view.findViewById<View>(itemId)?.apply {
+                    isClickable = true
+                    isFocusable = true
+                    setOnClickListener {
+                        showDashboardNotificationDetails(notification)
+                        markDashboardNotificationAsRead(notification)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun loadNotificationCount() {
+        if (!::notificationRepository.isInitialized) return
+        lifecycleScope.launch {
+            notificationRepository.getNotificationCount().collect { result ->
+                when (result) {
+                    is NetworkResult.Success -> {
+                        dashboardUnreadCount = result.data.unreadCount
+                            ?: dashboardNotifications.count { it.read_at.isNullOrBlank() }
+                        view?.let { updateNotificationBadges(it, dashboardUnreadCount) }
+                    }
+                    is NetworkResult.Unauthorized -> navigateToUnauthorized()
+                    else -> Unit
+                }
+            }
+        }
+    }
+
+    private fun updateNotificationBadges(view: View, unreadCount: Int) {
+        view.setText(R.id.textNotificationsCount, unreadCount.toString())
+        view.findViewById<TextView>(R.id.textHeaderNotificationBadge)?.apply {
+            text = if (unreadCount > 99) "99+" else unreadCount.toString()
+            visibility = if (unreadCount > 0) View.VISIBLE else View.GONE
+        }
+    }
+
+    private fun showDashboardNotificationDetails(notification: DashboardNotification) {
+        val dialog = BottomSheetDialog(requireContext())
+        val detailView = layoutInflater.inflate(R.layout.bottom_sheet_notification_detail, null)
+        val style = DashboardNotificationStyle.from(notification.type)
+
+        detailView.findViewById<TextView>(R.id.textDetailTitle).text =
+            notification.title.orFallback("Notification")
+        detailView.findViewById<TextView>(R.id.textDetailMessage).text =
+            notification.message.orFallback("-")
+        detailView.findViewById<TextView>(R.id.textDetailDate).text =
+            NotificationsAdapter.formatFullDateTime(notification.created_at).ifBlank { "-" }
+        detailView.findViewById<TextView>(R.id.textDetailType).text = style.label
+        detailView.findViewById<TextView>(R.id.textDetailTypeBadge).apply {
+            text = style.label
+            setBackgroundResource(style.badgeBackground)
+            setTextColor(ContextCompat.getColor(requireContext(), style.tintColor))
+        }
+        detailView.findViewById<View>(R.id.viewDetailIconTile).setBackgroundResource(style.iconBackground)
+        detailView.findViewById<ImageView>(R.id.imageDetailIcon).apply {
+            setImageResource(style.iconDrawable)
+            setColorFilter(ContextCompat.getColor(requireContext(), style.tintColor))
+        }
+
+        detailView.findViewById<View>(R.id.buttonNotificationDetailClose).setOnClickListener {
+            dialog.dismiss()
+        }
+        detailView.findViewById<View>(R.id.buttonNotificationDetailOk).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.setContentView(detailView)
+        dialog.setOnShowListener {
+            dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+                ?.setBackgroundColor(Color.TRANSPARENT)
+        }
+        dialog.show()
+    }
+
+    private fun markDashboardNotificationAsRead(notification: DashboardNotification) {
+        val id = notification.id ?: return
+        if (!notification.read_at.isNullOrBlank() || !::notificationRepository.isInitialized) return
+
+        lifecycleScope.launch {
+            notificationRepository.markAsRead(id).collect { result ->
+                when (result) {
+                    is NetworkResult.Success -> {
+                        dashboardNotifications = dashboardNotifications.map {
+                            if (it.id == id) it.copy(read_at = currentTimestamp()) else it
+                        }
+                        dashboardUnreadCount = (dashboardUnreadCount - 1).coerceAtLeast(0)
+                        view?.let {
+                            bindNotifications(it, dashboardNotifications)
+                            updateNotificationBadges(it, dashboardUnreadCount)
+                        }
+                    }
+                    is NetworkResult.Error -> Toast.makeText(
+                        requireContext(),
+                        "Unable to mark notification as read: ${result.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    is NetworkResult.Unauthorized -> navigateToUnauthorized()
+                    is NetworkResult.Loading -> Unit
+                }
             }
         }
     }
@@ -298,10 +415,13 @@ class StudentDashboardFragment : Fragment() {
             selectBottomNavItem(R.id.nav_my_fines)
         }
         view.findViewById<View>(R.id.actionMyProfile)?.setOnClickListener {
-            Toast.makeText(requireContext(), "Profile coming soon", Toast.LENGTH_SHORT).show()
+            (activity as? StudentDashboardActivity)?.openProfile()
+        }
+        view.findViewById<View>(R.id.buttonHeaderNotifications)?.setOnClickListener {
+            (activity as? StudentDashboardActivity)?.openNotifications()
         }
         view.findViewById<View>(R.id.actionViewAllNotifications)?.setOnClickListener {
-            Toast.makeText(requireContext(), "All notifications will be available soon.", Toast.LENGTH_SHORT).show()
+            (activity as? StudentDashboardActivity)?.openNotifications()
         }
         view.findViewById<View>(R.id.actionViewAllIssued)?.setOnClickListener {
             selectBottomNavItem(R.id.nav_my_books)
@@ -486,8 +606,7 @@ class StudentDashboardFragment : Fragment() {
 
     private fun formatRelativeDate(rawDate: String?): String {
         val date = parseDate(rawDate) ?: return formatDate(rawDate)
-        val diff = System.currentTimeMillis() - date.time
-        if (diff < 0) return formatDate(rawDate)
+        val diff = (System.currentTimeMillis() - date.time).coerceAtLeast(0L)
 
         val minutes = TimeUnit.MILLISECONDS.toMinutes(diff)
         val hours = TimeUnit.MILLISECONDS.toHours(diff)
@@ -495,29 +614,117 @@ class StudentDashboardFragment : Fragment() {
 
         return when {
             minutes < 1 -> "Just now"
-            minutes < 60 -> "$minutes min ago"
-            hours < 24 -> "$hours hr ago"
-            days == 1L -> "1 day ago"
-            days < 7 -> "$days days ago"
+            minutes < 60 -> if (minutes == 1L) "1 min ago" else "$minutes mins ago"
+            hours < 24 -> if (hours == 1L) "1 hr ago" else "$hours hrs ago"
+            days == 1L -> "Yesterday"
             else -> formatDate(rawDate)
         }
     }
 
     private fun parseDate(rawDate: String?): java.util.Date? {
         if (rawDate.isNullOrBlank()) return null
-        val normalized = rawDate.trim().replace(Regex("\\.\\d+Z$"), "Z")
-        val patterns = listOf(
+        val normalized = rawDate.trim()
+            .replace(Regex("\\.\\d+Z$"), "Z")
+            .replace(Regex("\\.\\d+$"), "")
+        val timezonePatterns = listOf(
             "yyyy-MM-dd'T'HH:mm:ss'Z'",
-            "yyyy-MM-dd'T'HH:mm:ssXXX",
+            "yyyy-MM-dd'T'HH:mm:ssXXX"
+        )
+        val localPatterns = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ss",
             "yyyy-MM-dd"
         )
 
-        return patterns.firstNotNullOfOrNull { pattern ->
+        timezonePatterns.firstNotNullOfOrNull { pattern ->
             runCatching {
                 SimpleDateFormat(pattern, Locale.US).apply {
                     timeZone = TimeZone.getTimeZone("UTC")
                 }.parse(normalized)
             }.getOrNull()
+        }?.let { return it }
+
+        return localPatterns.firstNotNullOfOrNull { pattern ->
+            runCatching {
+                SimpleDateFormat(pattern, Locale.US).parse(normalized)
+            }.getOrNull()
+        }
+    }
+
+    private fun currentTimestamp(): String {
+        return SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(java.util.Date())
+    }
+
+    private fun greetingForCurrentTime(): String {
+        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        return when (hour) {
+            in 5..11 -> "Good Morning"
+            in 12..16 -> "Good Afternoon"
+            in 17..20 -> "Good Evening"
+            else -> "Good Night"
+        }
+    }
+
+    private data class DashboardNotificationStyle(
+        val label: String,
+        val iconDrawable: Int,
+        val iconBackground: Int,
+        val badgeBackground: Int,
+        val tintColor: Int
+    ) {
+        companion object {
+            fun from(rawType: String?): DashboardNotificationStyle {
+                val type = rawType.orEmpty().lowercase(Locale.US)
+                return when {
+                    type.contains("returned") -> blue("BOOK", R.drawable.ic_book)
+                    type.contains("approved") -> green("BOOK", R.drawable.ic_check_circle)
+                    type.contains("rejected") -> red("BOOK", R.drawable.ic_x_circle)
+                    type.contains("fine") && type.contains("paid") -> green("FINE", R.drawable.ic_rupee)
+                    type.contains("fine") -> orange("FINE", R.drawable.ic_warning)
+                    type.contains("account") || type.contains("status") -> purple("ACCOUNT", R.drawable.ic_shield)
+                    else -> blue("INFO", R.drawable.ic_bell)
+                }
+            }
+
+            private fun blue(label: String, icon: Int) = DashboardNotificationStyle(
+                label,
+                icon,
+                R.drawable.bg_notification_icon_blue,
+                R.drawable.bg_notification_unread_badge,
+                R.color.notifications_primary
+            )
+
+            private fun green(label: String, icon: Int) = DashboardNotificationStyle(
+                label,
+                icon,
+                R.drawable.bg_notification_icon_green,
+                R.drawable.bg_notification_badge_green,
+                R.color.notifications_green
+            )
+
+            private fun red(label: String, icon: Int) = DashboardNotificationStyle(
+                label,
+                icon,
+                R.drawable.bg_notification_icon_red,
+                R.drawable.bg_notification_badge_red,
+                R.color.notifications_red
+            )
+
+            private fun orange(label: String, icon: Int) = DashboardNotificationStyle(
+                label,
+                icon,
+                R.drawable.bg_notification_icon_orange,
+                R.drawable.bg_notification_badge_orange,
+                R.color.notifications_orange
+            )
+
+            private fun purple(label: String, icon: Int) = DashboardNotificationStyle(
+                label,
+                icon,
+                R.drawable.bg_notification_icon_purple,
+                R.drawable.bg_notification_badge_purple,
+                R.color.notifications_purple
+            )
         }
     }
 

@@ -64,6 +64,10 @@
     <color name="student_header_start">#0B6EF6</color>
     <color name="student_header_mid">#4361EE</color>
     <color name="student_header_end">#6D28D9</color>
+    <color name="student_portal_header_start">#0B6EF6</color>
+    <color name="student_portal_header_end">#2563EB</color>
+    <color name="student_portal_header_title">#FFFFFF</color>
+    <color name="student_portal_header_subtitle">#EAF2FF</color>
     <color name="student_primary">#2563EB</color>
     <color name="student_purple">#7C3AED</color>
     <color name="student_green">#10B981</color>

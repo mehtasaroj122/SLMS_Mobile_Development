@@ -3,13 +3,22 @@ package com.saroj.lmsmobile.ui.student
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.view.Menu
 import android.view.View
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.saroj.lmsmobile.R
+import com.saroj.lmsmobile.api.RetrofitClient
+import com.saroj.lmsmobile.data.models.common.NetworkResult
+import com.saroj.lmsmobile.data.repository.NotificationRepository
 import com.saroj.lmsmobile.ui.components.BaseActivity
 import com.saroj.lmsmobile.ui.student.fragments.StudentDashboardFragment
 import com.saroj.lmsmobile.ui.student.fragments.StudentMyRequestsFragment
@@ -18,6 +27,7 @@ import com.saroj.lmsmobile.ui.student.fragments.StudentMyFinesFragment
 import com.saroj.lmsmobile.ui.student.fragments.StudentProfileFragment
 import com.saroj.lmsmobile.ui.student.fragments.StudentSearchBooksFragment
 import com.saroj.lmsmobile.ui.student.notifications.StudentNotificationsFragment
+import kotlinx.coroutines.launch
 
 /**
  * StudentDashboardActivity is the main activity for student users.
@@ -26,7 +36,7 @@ import com.saroj.lmsmobile.ui.student.notifications.StudentNotificationsFragment
  * - Bottom navigation to switch between modules
  * - Fragment-based navigation for main modules
  * - Dashboard, Search Books, My Books, My Fines, and More menu sections
- * - Consistent toolbar with logout option
+ * - Consistent student portal header
  *
  * Navigation:
  * BottomNavigationView switches between fragments:
@@ -51,12 +61,9 @@ class StudentDashboardActivity : BaseActivity() {
         lastSelectedNavItemId = savedInstanceState?.getInt(KEY_LAST_SELECTED_NAV_ITEM)
             ?: R.id.nav_dashboard
 
-        // Set up toolbar
-        setSupportActionBar(findViewById(R.id.toolbar))
-        supportActionBar?.title = "Student Dashboard"
-
         // Initialize views
         initializeViews()
+        setupStudentHeader()
 
         // Set up navigation
         setupBottomNavigation()
@@ -68,6 +75,8 @@ class StudentDashboardActivity : BaseActivity() {
         }
     }
 
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean = false
+
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putInt(KEY_LAST_SELECTED_NAV_ITEM, lastSelectedNavItemId)
         super.onSaveInstanceState(outState)
@@ -78,6 +87,46 @@ class StudentDashboardActivity : BaseActivity() {
      */
     private fun initializeViews() {
         bottomNavigation = findViewById(R.id.bottomNavigation)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun setupStudentHeader() {
+        window.statusBarColor = ContextCompat.getColor(this, R.color.student_portal_header_start)
+        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = false
+
+        val header = findViewById<View>(R.id.studentPortalHeader)
+        val initialHeaderLeft = header.paddingLeft
+        val initialHeaderTop = header.paddingTop
+        val initialHeaderRight = header.paddingRight
+        val initialHeaderBottom = header.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(header) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(
+                initialHeaderLeft,
+                initialHeaderTop + systemBars.top,
+                initialHeaderRight,
+                initialHeaderBottom
+            )
+            insets
+        }
+
+        val initialNavLeft = bottomNavigation.paddingLeft
+        val initialNavTop = bottomNavigation.paddingTop
+        val initialNavRight = bottomNavigation.paddingRight
+        val initialNavBottom = bottomNavigation.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(bottomNavigation) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(
+                initialNavLeft,
+                initialNavTop,
+                initialNavRight,
+                initialNavBottom + systemBars.bottom
+            )
+            insets
+        }
+
+        ViewCompat.requestApplyInsets(header)
+        ViewCompat.requestApplyInsets(bottomNavigation)
     }
 
     /**
@@ -132,6 +181,7 @@ class StudentDashboardActivity : BaseActivity() {
         val view = layoutInflater.inflate(R.layout.bottom_sheet_student_more, null)
         var openedSecondaryScreen = false
         dialog.setContentView(view)
+        updateMoreNotificationsBadge(view)
 
         view.findViewById<View>(R.id.rowProfile).setOnClickListener {
             openedSecondaryScreen = true
@@ -169,6 +219,28 @@ class StudentDashboardActivity : BaseActivity() {
         }
 
         dialog.show()
+    }
+
+    private fun updateMoreNotificationsBadge(view: View) {
+        val badge = view.findViewById<TextView>(R.id.textMoreNotificationsBadge)
+        badge.visibility = View.GONE
+
+        val apiService = RetrofitClient.getApiService(tokenManager)
+        val repository = NotificationRepository(apiService, tokenManager)
+        activityScope.launch {
+            repository.getNotificationCount().collect { result ->
+                when (result) {
+                    is NetworkResult.Success -> {
+                        val unreadCount = result.data.unreadCount ?: 0
+                        badge.text = if (unreadCount > 99) "99+" else unreadCount.toString()
+                        badge.visibility = if (unreadCount > 0) View.VISIBLE else View.GONE
+                    }
+                    is NetworkResult.Error -> badge.visibility = View.GONE
+                    is NetworkResult.Unauthorized -> badge.visibility = View.GONE
+                    is NetworkResult.Loading -> Unit
+                }
+            }
+        }
     }
 
     /**

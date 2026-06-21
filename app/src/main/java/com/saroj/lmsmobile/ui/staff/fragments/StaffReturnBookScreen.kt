@@ -51,6 +51,7 @@ import kotlin.concurrent.thread
 class StaffReturnBookScreen : Fragment() {
     private lateinit var viewModel: StaffReturnBookViewModel
     private lateinit var studentInput: EditText
+    private lateinit var studentClearButton: ImageView
     private lateinit var studentProgress: ProgressBar
     private lateinit var topProgress: ProgressBar
     private lateinit var studentError: TextView
@@ -96,6 +97,7 @@ class StaffReturnBookScreen : Fragment() {
 
     private fun bindViews(view: View) {
         studentInput = view.findViewById(R.id.inputReturnStudentSearch)
+        studentClearButton = view.findViewById(R.id.buttonClearReturnStudentSearch)
         studentProgress = view.findViewById(R.id.progressReturnStudentSearch)
         topProgress = view.findViewById(R.id.progressReturnTop)
         studentError = view.findViewById(R.id.textReturnStudentSearchError)
@@ -122,9 +124,11 @@ class StaffReturnBookScreen : Fragment() {
     }
 
     private fun setupInput() {
+        studentClearButton.setOnClickListener { studentInput.setText("") }
         studentInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                studentClearButton.visibility = if (s.isNullOrEmpty()) View.GONE else View.VISIBLE
                 viewModel.searchStudents(s?.toString().orEmpty())
             }
             override fun afterTextChanged(s: Editable?) = Unit

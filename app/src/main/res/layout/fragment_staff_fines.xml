@@ -1,66 +1,166 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/student_bg"
-    android:fillViewport="true">
+    android:background="@color/student_bg">
 
-    <LinearLayout
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/staffFinesSwipeRefresh"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:layout_height="match_parent"
+        android:background="@color/student_bg">
 
-        <TextView
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/staffFinesScrollView"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Fines"
-            android:textColor="@color/student_text_primary"
-            android:textSize="22sp"
-            android:textStyle="bold" />
+            android:layout_height="match_parent"
+            android:background="@color/student_bg"
+            android:clipToPadding="false"
+            android:fillViewport="true">
 
-        <GridLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:columnCount="2"
-            android:useDefaultMargins="true">
+            <LinearLayout
+                android:id="@+id/staffFinesContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="16dp"
+                android:paddingTop="20dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="32dp">
 
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="88dp"
-                android:layout_columnWeight="1"
-                android:background="@drawable/bg_dashboard_card"
-                android:gravity="center"
-                android:text="Rs. --&#10;Outstanding"
-                android:textColor="@color/student_text_primary"
-                android:textSize="15sp"
-                android:textStyle="bold" />
+                <ProgressBar
+                    android:id="@+id/progressStaffFinesTop"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:layout_marginBottom="12dp"
+                    android:indeterminate="true"
+                    android:visibility="gone" />
 
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="88dp"
-                android:layout_columnWeight="1"
-                android:background="@drawable/bg_dashboard_card"
-                android:gravity="center"
-                android:text="--&#10;Unpaid Fines"
-                android:textColor="@color/student_text_primary"
-                android:textSize="15sp"
-                android:textStyle="bold" />
-        </GridLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="18dp"
+                    android:orientation="vertical">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
-            android:layout_marginBottom="10dp"
-            android:text="Fine Records"
-            android:textColor="@color/student_text_primary"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="Fines"
+                        android:textColor="@color/student_text_primary"
+                        android:textSize="24sp"
+                        android:textStyle="bold" />
 
-        <include layout="@layout/item_staff_fine_placeholder" />
-        <include layout="@layout/item_staff_fine_paid_placeholder" />
-    </LinearLayout>
-</ScrollView>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:text="Manage student fine records"
+                        android:textColor="@color/student_text_secondary"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/containerFineSummary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:orientation="vertical" />
+
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cardFineSearch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:layout_marginBottom="14dp"
+                    app:cardBackgroundColor="@color/my_requests_card"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="58dp"
+                            android:background="@drawable/bg_my_requests_search_bar"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="12dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:contentDescription="@null"
+                                android:src="@drawable/ic_search"
+                                app:tint="@color/student_text_muted" />
+
+                            <EditText
+                                android:id="@+id/inputFineSearch"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_marginStart="10dp"
+                                android:layout_weight="1"
+                                android:background="@android:color/transparent"
+                                android:hint="Search by student name, ID, or book title"
+                                android:imeOptions="actionSearch"
+                                android:inputType="text"
+                                android:maxLines="1"
+                                android:textColor="@color/student_text_primary"
+                                android:textColorHint="@color/student_text_muted"
+                                android:textSize="13sp" />
+
+                            <ImageView
+                                android:id="@+id/buttonClearFineSearch"
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:background="@drawable/bg_my_requests_search_bar"
+                                android:contentDescription="Clear search"
+                                android:padding="6dp"
+                                android:src="@drawable/ic_close"
+                                android:visibility="gone"
+                                app:tint="@color/my_requests_text_muted" />
+
+                            <ProgressBar
+                                android:id="@+id/progressFineSearch"
+                                android:layout_width="22dp"
+                                android:layout_height="22dp"
+                                android:indeterminate="true"
+                                android:visibility="gone" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/textFineSearchError"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:textColor="@color/student_danger"
+                            android:textSize="12sp"
+                            android:visibility="gone" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <LinearLayout
+                    android:id="@+id/containerFineStudents"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <ProgressBar
+                    android:id="@+id/progressFineStudentsLoadMore"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="2dp"
+                    android:visibility="gone" />
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+</FrameLayout>

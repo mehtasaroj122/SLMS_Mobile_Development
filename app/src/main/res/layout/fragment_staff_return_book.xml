@@ -128,6 +128,16 @@
                                 android:layout_height="22dp"
                                 android:indeterminate="true"
                                 android:visibility="gone" />
+
+                            <ImageView
+                                android:id="@+id/buttonClearReturnStudentSearch"
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:contentDescription="Clear search"
+                                android:padding="6dp"
+                                android:src="@drawable/ic_close"
+                                android:visibility="gone"
+                                app:tint="@color/student_text_muted" />
                         </LinearLayout>
 
                         <TextView

@@ -79,6 +79,9 @@ Authentication: Protected routes use Sanctum bearer tokens. Send `Authorization:
 | GET | `/api/staff/issues/search` | Yes | staff/admin | Search active issues for return |
 | POST | `/api/staff/issues/{issue}/return` | Yes | staff/admin | Return issued book |
 | GET | `/api/staff/fines` | Yes | staff/admin | Staff fine list |
+| GET | `/api/staff/fines/summary` | Yes | staff/admin | Staff fine summary |
+| GET | `/api/staff/fines/students` | Yes | staff/admin | Student-wise fine list |
+| GET | `/api/staff/fines/students/{student}` | Yes | staff/admin | Student fine detail |
 | GET | `/api/staff/fines/{fine}` | Yes | staff/admin | Staff fine detail |
 | POST | `/api/staff/fines/{fine}/pay` | Yes | staff/admin | Mark fine paid |
 | POST | `/api/staff/fines/{fine}/waive` | Yes | staff/admin | Waive fine |
@@ -2217,6 +2220,106 @@ Controller: `StaffFineController@index`
 
 Notes: Searches fine id, remarks, student, and book fields.
 
+### Staff Fine Summary
+
+Method: GET
+
+Endpoint: `/api/staff/fines/summary`
+
+Auth: Required
+
+Roles: staff/admin
+
+Purpose: Return total, collected, pending, waived, record counts, and overdue record count for the staff mobile fines page.
+
+Request: none.
+
+Success Response:
+
+```json
+{"success":true,"message":"Fine summary fetched successfully.","data":{"total_fines":3790,"collected":0,"pending":3790,"waived":0,"total_records":83,"paid_records":0,"pending_records":83,"waived_records":0,"overdue_records":83}}
+```
+
+Error Response:
+
+```json
+{"message":"Forbidden."}
+```
+
+Controller: `StaffFineController@summary`
+
+Notes: Uses real `fines` records. Amounts are grouped by `pending`, `paid`, and `waived` status.
+
+### Student-wise Staff Fine List
+
+Method: GET
+
+Endpoint: `/api/staff/fines/students`
+
+Auth: Required
+
+Roles: staff/admin
+
+Purpose: Return one fine summary row per student for the staff mobile fines list.
+
+Request: optional `search`. Search checks student name, email, student id, roll/symbol number, department, book title/author/isbn, fine amount, fine id, fine reason, and waiver reason.
+
+Success Response:
+
+```json
+{"success":true,"message":"Student fine records fetched successfully.","data":[{"student_id":1,"user_id":5,"name":"Saroj Mehta","email":"saroj@example.com","roll_no":"CS-2023-001","symbol_no":"CS-2023-001","department":"Computer Science","photo":null,"total_fine":1300,"pending_amount":1300,"paid_amount":0,"waived_amount":0,"fine_records_count":3,"pending_records_count":3,"paid_records_count":0,"waived_records_count":0,"overdue_records_count":3,"status":"pending"}]}
+```
+
+No Records Response:
+
+```json
+{"success":true,"message":"No fine records found.","data":[]}
+```
+
+Error Response:
+
+```json
+{"message":"Forbidden."}
+```
+
+Controller: `StaffFineController@students`
+
+Notes: This endpoint is grouped by student and does not return every fine record.
+
+### Staff Student Fine Detail
+
+Method: GET
+
+Endpoint: `/api/staff/fines/students/{student}`
+
+Auth: Required
+
+Roles: staff/admin
+
+Purpose: Return student information, that student's fine summary, and all fine records for the selected student.
+
+Request: path `student` is the students table id.
+
+Success Response:
+
+```json
+{"success":true,"message":"Student fine detail fetched successfully.","data":{"student":{"id":1,"student_id":1,"user_id":5,"name":"Saroj Mehta","email":"saroj@example.com","roll_no":"CS-2023-001","symbol_no":"CS-2023-001","department":"Computer Science","photo":null},"summary":{"total_fine":1300,"pending_amount":1300,"paid_amount":0,"waived_amount":0,"records_count":3,"pending_records":3,"paid_records":0,"waived_records":0,"overdue_records":3},"fines":[{"id":10,"issue_id":25,"book_id":4,"book_title":"Clean Code","author":"Robert C. Martin","due_date":"2026-07-11","return_date":"2026-07-12","days_overdue":0,"amount":250,"status":"pending","reason":"Damaged book","fine_type":"Damaged book","waive_reason":null,"paid_at":null,"waived_at":null,"created_at":"2026-06-21 17:00:00","updated_at":"2026-06-21 17:00:00"}]}}
+```
+
+No Fine Records Response:
+
+```json
+{"success":true,"message":"Student fine detail fetched successfully.","data":{"student":{"id":1,"student_id":1,"name":"Saroj Mehta"},"summary":{"total_fine":0,"pending_amount":0,"paid_amount":0,"waived_amount":0,"records_count":0,"pending_records":0,"paid_records":0,"waived_records":0,"overdue_records":0},"fines":[]}}
+```
+
+Error Response:
+
+```json
+{"message":"Resource not found."}
+```
+
+Controller: `StaffFineController@studentDetails`
+
 ### Staff Fine Detail
 
 Method: GET
@@ -2234,7 +2337,7 @@ Request: path `fine`.
 Success Response:
 
 ```json
-{"success":true,"message":"Fine fetched successfully.","data":{"fine_id":1,"amount":25,"status":"pending","book_title":"Clean Code"}}
+{"success":true,"message":"Fine fetched successfully.","data":{"fine_id":1,"amount":25,"status":"pending","book_title":"Clean Code","waive_reason":null,"paid_at":null,"waived_at":null}}
 ```
 
 Error Response:
@@ -2264,7 +2367,7 @@ Request: optional `payment_method` in `cash`, `card`, `online`.
 Success Response:
 
 ```json
-{"success":true,"message":"Fine marked as paid successfully.","data":{"fine_id":1,"status":"paid","paid_date":"2026-06-21"}}
+{"success":true,"message":"Fine marked as paid successfully.","data":{"fine_id":1,"status":"paid","amount":25,"paid_at":"2026-06-21 17:30:00","paid_by":2}}
 ```
 
 Error Response:
@@ -2298,18 +2401,18 @@ Request:
 Success Response:
 
 ```json
-{"success":true,"message":"Fine waived successfully.","data":{"fine_id":1,"status":"waived","remarks":"Approved by librarian"}}
+{"success":true,"message":"Fine waived successfully.","data":{"fine_id":1,"status":"waived","amount":25,"waive_reason":"Approved by librarian","waived_at":"2026-06-21 17:32:00","waived_by":2}}
 ```
 
 Error Response:
 
 ```json
-{"message":"The given data was invalid.","errors":{"reason":["The reason field is required."]}}
+{"success":false,"message":"The reason field is required.","errors":{"reason":["The reason field is required."]}}
 ```
 
 Controller: `StaffFineController@waive`
 
-Notes: Requires reason and only acts on pending fines.
+Notes: Requires `reason` between 3 and 500 characters, persists it in `waive_reason`, and only acts on pending fines.
 
 ### Staff Book Requests
 

@@ -46,6 +46,8 @@ class StaffIssueBookScreen : Fragment() {
     private lateinit var viewModel: StaffIssueBookViewModel
     private lateinit var studentInput: EditText
     private lateinit var bookInput: EditText
+    private lateinit var studentClearButton: ImageView
+    private lateinit var bookClearButton: ImageView
     private lateinit var studentProgress: ProgressBar
     private lateinit var bookProgress: ProgressBar
     private lateinit var topProgress: ProgressBar
@@ -93,6 +95,8 @@ class StaffIssueBookScreen : Fragment() {
     private fun bindViews(view: View) {
         studentInput = view.findViewById(R.id.inputStudentSearch)
         bookInput = view.findViewById(R.id.inputBookSearch)
+        studentClearButton = view.findViewById(R.id.buttonClearStudentSearch)
+        bookClearButton = view.findViewById(R.id.buttonClearBookSearch)
         studentProgress = view.findViewById(R.id.progressStudentSearch)
         bookProgress = view.findViewById(R.id.progressBookSearch)
         topProgress = view.findViewById(R.id.progressIssueTop)
@@ -132,9 +136,12 @@ class StaffIssueBookScreen : Fragment() {
     }
 
     private fun setupInputs() {
+        studentClearButton.setOnClickListener { studentInput.setText("") }
+        bookClearButton.setOnClickListener { bookInput.setText("") }
         studentInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                studentClearButton.visibility = if (s.isNullOrEmpty()) View.GONE else View.VISIBLE
                 viewModel.searchStudents(s?.toString().orEmpty())
             }
             override fun afterTextChanged(s: Editable?) = Unit
@@ -151,6 +158,7 @@ class StaffIssueBookScreen : Fragment() {
         bookInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                bookClearButton.visibility = if (s.isNullOrEmpty()) View.GONE else View.VISIBLE
                 viewModel.searchBooks(s?.toString().orEmpty())
             }
             override fun afterTextChanged(s: Editable?) = Unit

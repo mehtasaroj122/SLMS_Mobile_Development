@@ -10,6 +10,11 @@ import com.saroj.lmsmobile.data.models.book.StudentBookRequestResponse
 import com.saroj.lmsmobile.data.models.common.PaginatedResponse
 import com.saroj.lmsmobile.data.models.dashboard.DashboardResponse
 import com.saroj.lmsmobile.data.models.fine.Fine
+import com.saroj.lmsmobile.data.models.fine.FineActionResponse
+import com.saroj.lmsmobile.data.models.fine.FineStudentListResponse
+import com.saroj.lmsmobile.data.models.fine.FineSummaryResponse
+import com.saroj.lmsmobile.data.models.fine.StudentFineDetailResponse
+import com.saroj.lmsmobile.data.models.fine.WaiveFineRequest
 import com.saroj.lmsmobile.data.models.issue.Issue
 import com.saroj.lmsmobile.data.models.issue.IssueBooksRequest
 import com.saroj.lmsmobile.data.models.issue.IssueRequest
@@ -392,6 +397,30 @@ interface ApiService {
 
     @GET("student/fines/{id}")
     suspend fun getAuthenticatedStudentFineDetail(@Path("id") id: Int): Response<JsonElement>
+
+    @GET("staff/fines/summary")
+    suspend fun getStaffFineSummary(): Response<FineSummaryResponse>
+
+    @GET("staff/fines/students")
+    suspend fun getStaffFineStudents(
+        @Query("search") search: String? = null
+    ): Response<FineStudentListResponse>
+
+    @GET("staff/fines/students/{student}")
+    suspend fun getStudentFineDetails(
+        @Path("student") studentId: Int
+    ): Response<StudentFineDetailResponse>
+
+    @POST("staff/fines/{fine}/pay")
+    suspend fun markFinePaid(
+        @Path("fine") fineId: Int
+    ): Response<FineActionResponse>
+
+    @POST("staff/fines/{fine}/waive")
+    suspend fun waiveFine(
+        @Path("fine") fineId: Int,
+        @Body request: WaiveFineRequest
+    ): Response<FineActionResponse>
 
     // ==================== NOTIFICATIONS ====================
 

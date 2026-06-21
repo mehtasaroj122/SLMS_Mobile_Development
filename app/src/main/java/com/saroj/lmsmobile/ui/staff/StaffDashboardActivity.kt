@@ -15,6 +15,7 @@ import com.saroj.lmsmobile.R
 import com.saroj.lmsmobile.ui.components.BaseActivity
 import com.saroj.lmsmobile.ui.staff.fragments.StaffBookRequestsScreen
 import com.saroj.lmsmobile.ui.staff.fragments.StaffDashboardScreen
+import com.saroj.lmsmobile.ui.staff.fragments.StaffFineDetailScreen
 import com.saroj.lmsmobile.ui.staff.fragments.StaffFinesScreen
 import com.saroj.lmsmobile.ui.staff.fragments.StaffIssueBookScreen
 import com.saroj.lmsmobile.ui.staff.fragments.StaffMoreScreen
@@ -126,26 +127,31 @@ class StaffDashboardActivity : BaseActivity() {
         bottomNavigation.setOnItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.nav_dashboard -> {
+                    bottomNavigation.visibility = View.VISIBLE
                     lastSelectedNavItemId = menuItem.itemId
                     loadFragment(StaffDashboardScreen())
                     true
                 }
                 R.id.nav_issue_book -> {
+                    bottomNavigation.visibility = View.VISIBLE
                     lastSelectedNavItemId = menuItem.itemId
                     loadFragment(StaffIssueBookScreen())
                     true
                 }
                 R.id.nav_return_book -> {
+                    bottomNavigation.visibility = View.VISIBLE
                     lastSelectedNavItemId = menuItem.itemId
                     loadFragment(StaffReturnBookScreen())
                     true
                 }
                 R.id.nav_fines -> {
+                    bottomNavigation.visibility = View.VISIBLE
                     lastSelectedNavItemId = menuItem.itemId
                     loadFragment(StaffFinesScreen())
                     true
                 }
                 R.id.nav_more -> {
+                    bottomNavigation.visibility = View.VISIBLE
                     lastSelectedNavItemId = menuItem.itemId
                     loadFragment(StaffMoreScreen())
                     true
@@ -158,6 +164,7 @@ class StaffDashboardActivity : BaseActivity() {
     private fun setupBackStackNavigation() {
         supportFragmentManager.addOnBackStackChangedListener {
             if (supportFragmentManager.backStackEntryCount == 0) {
+                bottomNavigation.visibility = View.VISIBLE
                 markBottomNavItemChecked(lastSelectedNavItemId)
             }
         }
@@ -206,6 +213,22 @@ class StaffDashboardActivity : BaseActivity() {
 
     fun openFines() {
         bottomNavigation.selectedItemId = R.id.nav_fines
+    }
+
+    fun openFineDetails(studentId: Int) {
+        lastSelectedNavItemId = R.id.nav_fines
+        markBottomNavItemChecked(R.id.nav_fines)
+        bottomNavigation.visibility = View.GONE
+        supportFragmentManager.beginTransaction()
+            .setCustomAnimations(
+                android.R.anim.fade_in,
+                android.R.anim.fade_out,
+                android.R.anim.fade_in,
+                android.R.anim.fade_out
+            )
+            .replace(R.id.fragmentContainer, StaffFineDetailScreen.newInstance(studentId))
+            .addToBackStack(StaffFineDetailScreen::class.java.simpleName)
+            .commit()
     }
 
     fun openBookRequests() {

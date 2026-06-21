@@ -495,14 +495,6 @@ class StaffDashboardScreen : Fragment() {
     )
 }
 
-class StaffIssueBookScreen : Fragment() {
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View = inflater.inflate(R.layout.fragment_staff_issue_book, container, false)
-}
-
 class StaffReturnBookScreen : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,

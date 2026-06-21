@@ -196,6 +196,10 @@ class StaffDashboardActivity : BaseActivity() {
         bottomNavigation.selectedItemId = R.id.nav_issue_book
     }
 
+    fun openDashboard() {
+        bottomNavigation.selectedItemId = R.id.nav_dashboard
+    }
+
     fun openReturnBook(issueId: Int? = null) {
         bottomNavigation.selectedItemId = R.id.nav_return_book
     }

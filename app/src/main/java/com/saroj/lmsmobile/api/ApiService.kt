@@ -11,6 +11,7 @@ import com.saroj.lmsmobile.data.models.common.PaginatedResponse
 import com.saroj.lmsmobile.data.models.dashboard.DashboardResponse
 import com.saroj.lmsmobile.data.models.fine.Fine
 import com.saroj.lmsmobile.data.models.issue.Issue
+import com.saroj.lmsmobile.data.models.issue.IssueBooksRequest
 import com.saroj.lmsmobile.data.models.issue.IssueRequest
 import com.saroj.lmsmobile.data.models.profile.ChangePasswordRequest
 import com.saroj.lmsmobile.data.models.profile.ProfileUpdateRequest
@@ -120,6 +121,9 @@ interface ApiService {
     @GET("books/{id}")
     suspend fun getBookDetail(@Path("id") id: Int): Response<Book>
 
+    @GET("books/{id}")
+    suspend fun getBookDetailJson(@Path("id") id: Int): Response<JsonElement>
+
     /**
      * Search books by query string.
      * @param query Search keyword (title, author, ISBN)
@@ -201,6 +205,9 @@ interface ApiService {
     @GET("students/{id}")
     suspend fun getStudentDetail(@Path("id") id: Int): Response<Student>
 
+    @GET("students/{id}")
+    suspend fun getStudentDetailJson(@Path("id") id: Int): Response<JsonElement>
+
     /**
      * Search students by query string.
      * @param query Search keyword (name, email, student ID)
@@ -211,6 +218,13 @@ interface ApiService {
         @Query("page") page: Int = 1,
         @Query("per_page") pageSize: Int = 20
     ): Response<PaginatedResponse<Student>>
+
+    @GET("students/search")
+    suspend fun searchStudentsJson(
+        @Query("q") query: String,
+        @Query("page") page: Int = 1,
+        @Query("per_page") pageSize: Int = 20
+    ): Response<JsonElement>
 
     // ==================== ISSUES (Book Borrowing) ====================
 
@@ -271,6 +285,35 @@ interface ApiService {
 
     @GET("staff/dashboard")
     suspend fun getStaffDashboard(): Response<StaffDashboardEnvelope>
+
+    @GET("staff/students/search")
+    suspend fun searchStaffIssueStudents(
+        @Query("query") query: String,
+        @Query("q") q: String = query
+    ): Response<JsonElement>
+
+    @GET("staff/students/{studentId}")
+    suspend fun getStaffIssueStudentDetail(
+        @Path("studentId") studentId: Int
+    ): Response<JsonElement>
+
+    @GET("staff/students/{studentId}/issue-privileges")
+    suspend fun getStaffStudentIssuePrivileges(
+        @Path("studentId") studentId: Int
+    ): Response<JsonElement>
+
+    @GET("staff/books/search")
+    suspend fun searchStaffIssueBooks(
+        @Query("query") query: String,
+        @Query("q") q: String = query,
+        @Query("student_id") studentId: Int,
+        @Query("studentId") studentIdCamel: Int = studentId
+    ): Response<JsonElement>
+
+    @POST("staff/issues")
+    suspend fun issueStaffBooks(
+        @Body request: IssueBooksRequest
+    ): Response<JsonElement>
 
     @POST("book-requests/{id}/approve")
     suspend fun approveBookRequest(@Path("id") id: Int): Response<JsonElement>

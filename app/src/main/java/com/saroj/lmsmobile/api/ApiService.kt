@@ -13,6 +13,9 @@ import com.saroj.lmsmobile.data.models.fine.Fine
 import com.saroj.lmsmobile.data.models.issue.Issue
 import com.saroj.lmsmobile.data.models.issue.IssueBooksRequest
 import com.saroj.lmsmobile.data.models.issue.IssueRequest
+import com.saroj.lmsmobile.data.models.returnbook.ProcessReturnRequest
+import com.saroj.lmsmobile.data.models.returnbook.ReturnPreviewRequest
+import com.saroj.lmsmobile.data.models.returnbook.SingleReturnRequest
 import com.saroj.lmsmobile.data.models.profile.ChangePasswordRequest
 import com.saroj.lmsmobile.data.models.profile.ProfileUpdateRequest
 import com.saroj.lmsmobile.data.models.staffdashboard.RejectBookRequestBody
@@ -314,6 +317,45 @@ interface ApiService {
     suspend fun issueStaffBooks(
         @Body request: IssueBooksRequest
     ): Response<JsonElement>
+
+    @GET("staff/returns/settings")
+    suspend fun getReturnSettings(): Response<JsonElement>
+
+    @GET("staff/returns/students/search")
+    suspend fun searchReturnStudents(
+        @Query("query") query: String,
+        @Query("q") q: String = query
+    ): Response<JsonElement>
+
+    @GET("staff/returns/students/{studentId}")
+    suspend fun getStudentReturnData(
+        @Path("studentId") studentId: Int
+    ): Response<JsonElement>
+
+    @POST("staff/returns/preview")
+    suspend fun previewReturnFine(
+        @Body request: ReturnPreviewRequest
+    ): Response<JsonElement>
+
+    @POST("staff/returns")
+    suspend fun processReturns(
+        @Body request: ProcessReturnRequest
+    ): Response<JsonElement>
+
+    @GET("staff/issues/search")
+    suspend fun searchStaffActiveIssues(
+        @Query("query") query: String,
+        @Query("q") q: String = query
+    ): Response<JsonElement>
+
+    @POST("staff/issues/{issueId}/return")
+    suspend fun returnStaffIssue(
+        @Path("issueId") issueId: Int,
+        @Body request: SingleReturnRequest
+    ): Response<JsonElement>
+
+    @GET("library/settings")
+    suspend fun getLibrarySettings(): Response<JsonElement>
 
     @POST("book-requests/{id}/approve")
     suspend fun approveBookRequest(@Path("id") id: Int): Response<JsonElement>

@@ -12,6 +12,7 @@
         android:background="@color/student_bg">
 
         <androidx.core.widget.NestedScrollView
+            android:id="@+id/issueBookScrollView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@color/student_bg"
@@ -149,6 +150,16 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:orientation="vertical" />
+
+                    <ProgressBar
+                        android:id="@+id/progressStudentSearchLoadMore"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="10dp"
+                        android:layout_marginBottom="2dp"
+                        android:indeterminate="true"
+                        android:visibility="gone" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
@@ -254,6 +265,16 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:orientation="vertical" />
+
+                    <ProgressBar
+                        android:id="@+id/progressBookSearchLoadMore"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="10dp"
+                        android:layout_marginBottom="2dp"
+                        android:indeterminate="true"
+                        android:visibility="gone" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 

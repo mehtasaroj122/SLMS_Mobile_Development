@@ -297,7 +297,9 @@ interface ApiService {
     @GET("staff/students/search")
     suspend fun searchStaffIssueStudents(
         @Query("query") query: String,
-        @Query("q") q: String = query
+        @Query("q") q: String = query,
+        @Query("page") page: Int = 1,
+        @Query("per_page") pageSize: Int = 20
     ): Response<JsonElement>
 
     @GET("staff/students/{studentId}")
@@ -315,7 +317,9 @@ interface ApiService {
         @Query("query") query: String,
         @Query("q") q: String = query,
         @Query("student_id") studentId: Int,
-        @Query("studentId") studentIdCamel: Int = studentId
+        @Query("studentId") studentIdCamel: Int = studentId,
+        @Query("page") page: Int = 1,
+        @Query("per_page") pageSize: Int = 20
     ): Response<JsonElement>
 
     @POST("staff/issues")
@@ -357,6 +361,25 @@ interface ApiService {
     suspend fun returnStaffIssue(
         @Path("issueId") issueId: Int,
         @Body request: SingleReturnRequest
+    ): Response<JsonElement>
+
+    @GET("staff/book-requests/summary")
+    suspend fun getStaffBookRequestSummary(): Response<JsonElement>
+
+    @GET("staff/book-requests")
+    suspend fun getStaffBookRequests(
+        @Query("status") status: String,
+        @Query("search") search: String? = null,
+        @Query("per_page") pageSize: Int = 100
+    ): Response<JsonElement>
+
+    @POST("staff/book-requests/{requestId}/approve")
+    suspend fun approveStaffBookRequest(@Path("requestId") requestId: Int): Response<JsonElement>
+
+    @POST("staff/book-requests/{requestId}/reject")
+    suspend fun rejectStaffBookRequest(
+        @Path("requestId") requestId: Int,
+        @Body request: RejectBookRequestBody = RejectBookRequestBody()
     ): Response<JsonElement>
 
     @GET("library/settings")

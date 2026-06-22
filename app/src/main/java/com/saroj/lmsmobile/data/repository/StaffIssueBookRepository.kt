@@ -16,6 +16,7 @@ import com.saroj.lmsmobile.data.models.issue.IssueBooksRequest
 import com.saroj.lmsmobile.data.models.issue.IssueBooksResponse
 import com.saroj.lmsmobile.data.models.issue.IssuePrivilegesData
 import com.saroj.lmsmobile.data.models.issue.IssuePrivilegesResponse
+import com.saroj.lmsmobile.data.models.issue.IssueSearchMeta
 import com.saroj.lmsmobile.data.models.issue.IssueStudent
 import com.saroj.lmsmobile.data.models.issue.StudentIssueContext
 import com.saroj.lmsmobile.data.models.issue.StudentSearchResponse
@@ -33,13 +34,17 @@ class StaffIssueBookRepository(
 ) {
     private val gson = Gson()
 
-    fun searchStudents(query: String): Flow<NetworkResult<StudentSearchResponse>> = flow {
+    fun searchStudents(
+        query: String,
+        page: Int = 1,
+        pageSize: Int = DEFAULT_PAGE_SIZE
+    ): Flow<NetworkResult<StudentSearchResponse>> = flow {
         emit(NetworkResult.Loading())
-        val response = apiService.searchStaffIssueStudents(query)
+        val response = apiService.searchStaffIssueStudents(query, page = page, pageSize = pageSize)
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseStudentSearch(response.body())))
         } else if (response.code() == Constants.HTTP_NOT_FOUND) {
-            emit(searchStudentsFallback(query))
+            emit(searchStudentsFallback(query, page, pageSize))
         } else {
             emit(handleErrorResponse(response))
         }
@@ -72,13 +77,23 @@ class StaffIssueBookRepository(
         emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
     }
 
-    fun searchBooks(query: String, studentId: Int): Flow<NetworkResult<BookSearchResponse>> = flow {
+    fun searchBooks(
+        query: String,
+        studentId: Int,
+        page: Int = 1,
+        pageSize: Int = DEFAULT_PAGE_SIZE
+    ): Flow<NetworkResult<BookSearchResponse>> = flow {
         emit(NetworkResult.Loading())
-        val response = apiService.searchStaffIssueBooks(query = query, studentId = studentId)
+        val response = apiService.searchStaffIssueBooks(
+            query = query,
+            studentId = studentId,
+            page = page,
+            pageSize = pageSize
+        )
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseBookSearch(response.body()).withEnrichedCovers()))
         } else if (response.code() == Constants.HTTP_NOT_FOUND) {
-            emit(searchBooksFallback(query))
+            emit(searchBooksFallback(query, page, pageSize))
         } else {
             emit(handleErrorResponse(response))
         }
@@ -141,8 +156,12 @@ class StaffIssueBookRepository(
             }
     }
 
-    private suspend fun searchStudentsFallback(query: String): NetworkResult<StudentSearchResponse> {
-        val response = apiService.searchStudentsJson(query, page = 1, pageSize = 20)
+    private suspend fun searchStudentsFallback(
+        query: String,
+        page: Int,
+        pageSize: Int
+    ): NetworkResult<StudentSearchResponse> {
+        val response = apiService.searchStudentsJson(query, page = page, pageSize = pageSize)
         return if (response.isSuccessful) {
             NetworkResult.Success(parseStudentSearch(response.body()))
         } else {
@@ -150,15 +169,30 @@ class StaffIssueBookRepository(
         }
     }
 
-    private suspend fun searchBooksFallback(query: String): NetworkResult<BookSearchResponse> {
+    private suspend fun searchBooksFallback(
+        query: String,
+        page: Int,
+        pageSize: Int
+    ): NetworkResult<BookSearchResponse> {
         val response = apiService.searchBooks(
             query = query,
-            page = 1,
-            pageSize = 20
+            page = page,
+            pageSize = pageSize
         )
         return if (response.isSuccessful) {
             val books = response.body()?.data.orEmpty().map { it.toIssueBookItem() }
-            NetworkResult.Success(BookSearchResponse(data = books).withEnrichedCovers())
+            val pagination = response.body()?.meta
+            NetworkResult.Success(
+                BookSearchResponse(
+                    data = books,
+                    meta = IssueSearchMeta(
+                        currentPage = pagination?.current_page ?: page,
+                        lastPage = pagination?.last_page ?: page,
+                        perPage = pagination?.per_page ?: pageSize,
+                        total = pagination?.total ?: books.size
+                    )
+                ).withEnrichedCovers()
+            )
         } else {
             handleErrorResponse(response)
         }
@@ -202,7 +236,8 @@ class StaffIssueBookRepository(
             success = root?.bool("success"),
             status = root?.string("status"),
             message = root?.string("message"),
-            data = students
+            data = students,
+            meta = parseSearchMeta(root, students.size)
         )
     }
 
@@ -298,8 +333,32 @@ class StaffIssueBookRepository(
             success = root?.bool("success"),
             status = root?.string("status"),
             message = root?.string("message"),
-            data = books
+            data = books,
+            meta = parseSearchMeta(root, books.size)
         )
+    }
+
+    private fun parseSearchMeta(root: JsonObject?, fallbackCount: Int): IssueSearchMeta? {
+        val meta = root?.get("meta")?.asObjectOrNull()
+            ?: root?.get("pagination")?.asObjectOrNull()
+            ?: root?.get("data")?.asObjectOrNull()?.get("meta")?.asObjectOrNull()
+            ?: root?.get("data")?.asObjectOrNull()?.get("pagination")?.asObjectOrNull()
+
+        return if (meta != null) {
+            IssueSearchMeta(
+                currentPage = meta.int("current_page", "currentPage", "page"),
+                lastPage = meta.int("last_page", "lastPage", "pages"),
+                perPage = meta.int("per_page", "perPage", "page_size", "pageSize"),
+                total = meta.int("total", "total_count", "totalCount")
+            )
+        } else {
+            IssueSearchMeta(
+                currentPage = 1,
+                lastPage = 1,
+                perPage = fallbackCount,
+                total = fallbackCount
+            )
+        }
     }
 
     private fun parseIssueBook(element: JsonElement?): IssueBookItem? {
@@ -527,5 +586,6 @@ class StaffIssueBookRepository(
 
     private companion object {
         const val TAG = "StaffIssueBookRepo"
+        const val DEFAULT_PAGE_SIZE = 20
     }
 }

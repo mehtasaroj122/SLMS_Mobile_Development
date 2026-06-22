@@ -24,6 +24,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory
+import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -50,6 +52,8 @@ class StaffIssueBookScreen : Fragment() {
     private lateinit var bookClearButton: ImageView
     private lateinit var studentProgress: ProgressBar
     private lateinit var bookProgress: ProgressBar
+    private lateinit var studentLoadMoreProgress: ProgressBar
+    private lateinit var bookLoadMoreProgress: ProgressBar
     private lateinit var topProgress: ProgressBar
     private lateinit var studentError: TextView
     private lateinit var bookError: TextView
@@ -61,6 +65,7 @@ class StaffIssueBookScreen : Fragment() {
     private lateinit var summaryContainer: LinearLayout
     private lateinit var issueButton: TextView
     private lateinit var swipeRefresh: SwipeRefreshLayout
+    private lateinit var scrollView: NestedScrollView
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -73,6 +78,7 @@ class StaffIssueBookScreen : Fragment() {
         bindViews(view)
         setupPullToRefresh()
         setupInputs()
+        setupLoadMoreScroll()
         setupObservers()
         renderAll()
     }
@@ -99,6 +105,8 @@ class StaffIssueBookScreen : Fragment() {
         bookClearButton = view.findViewById(R.id.buttonClearBookSearch)
         studentProgress = view.findViewById(R.id.progressStudentSearch)
         bookProgress = view.findViewById(R.id.progressBookSearch)
+        studentLoadMoreProgress = view.findViewById(R.id.progressStudentSearchLoadMore)
+        bookLoadMoreProgress = view.findViewById(R.id.progressBookSearchLoadMore)
         topProgress = view.findViewById(R.id.progressIssueTop)
         studentError = view.findViewById(R.id.textStudentSearchError)
         bookError = view.findViewById(R.id.textBookSearchError)
@@ -110,6 +118,7 @@ class StaffIssueBookScreen : Fragment() {
         summaryContainer = view.findViewById(R.id.containerIssueSummary)
         issueButton = view.findViewById(R.id.buttonIssueBooks)
         swipeRefresh = view.findViewById(R.id.issueBookSwipeRefresh)
+        scrollView = view.findViewById(R.id.issueBookScrollView)
         issueButton.setOnClickListener { showConfirmDialog() }
     }
 
@@ -169,6 +178,20 @@ class StaffIssueBookScreen : Fragment() {
                 true
             } else {
                 false
+            }
+        }
+    }
+
+    private fun setupLoadMoreScroll() {
+        scrollView.setOnScrollChangeListener { nestedScrollView: NestedScrollView, _, scrollY, _, _ ->
+            val content = nestedScrollView.getChildAt(0) ?: return@setOnScrollChangeListener
+            val distanceFromBottom = content.measuredHeight - nestedScrollView.measuredHeight - scrollY
+            if (distanceFromBottom > dp(96)) return@setOnScrollChangeListener
+
+            if (viewModel.selectedStudent.value == null) {
+                viewModel.loadMoreStudents()
+            } else {
+                viewModel.loadMoreBooks()
             }
         }
     }

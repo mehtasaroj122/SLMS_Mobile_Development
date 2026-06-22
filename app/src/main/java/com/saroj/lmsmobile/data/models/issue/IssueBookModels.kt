@@ -11,7 +11,18 @@ data class StudentSearchResponse(
     val success: Boolean? = null,
     val status: String? = null,
     val message: String? = null,
-    val data: List<IssueStudent> = emptyList()
+    val data: List<IssueStudent> = emptyList(),
+    val meta: IssueSearchMeta? = null
+)
+
+data class IssueSearchMeta(
+    @SerializedName(value = "current_page", alternate = ["currentPage"])
+    val currentPage: Int? = null,
+    @SerializedName(value = "last_page", alternate = ["lastPage"])
+    val lastPage: Int? = null,
+    @SerializedName(value = "per_page", alternate = ["perPage"])
+    val perPage: Int? = null,
+    val total: Int? = null
 )
 
 data class IssueStudent(
@@ -96,7 +107,8 @@ data class BookSearchResponse(
     val success: Boolean? = null,
     val status: String? = null,
     val message: String? = null,
-    val data: List<IssueBookItem> = emptyList()
+    val data: List<IssueBookItem> = emptyList(),
+    val meta: IssueSearchMeta? = null
 )
 
 data class IssueBookItem(

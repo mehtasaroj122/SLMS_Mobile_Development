@@ -39,6 +39,12 @@ class StaffIssueBookViewModel(
     private val _isSearchingBooks = MutableLiveData(false)
     val isSearchingBooks: LiveData<Boolean> = _isSearchingBooks
 
+    private val _isLoadingMoreStudents = MutableLiveData(false)
+    val isLoadingMoreStudents: LiveData<Boolean> = _isLoadingMoreStudents
+
+    private val _isLoadingMoreBooks = MutableLiveData(false)
+    val isLoadingMoreBooks: LiveData<Boolean> = _isLoadingMoreBooks
+
     private val _isLoadingPrivileges = MutableLiveData(false)
     val isLoadingPrivileges: LiveData<Boolean> = _isLoadingPrivileges
 
@@ -70,20 +76,33 @@ class StaffIssueBookViewModel(
 
     private var studentSearchJob: Job? = null
     private var bookSearchJob: Job? = null
+    private var studentLoadMoreJob: Job? = null
+    private var bookLoadMoreJob: Job? = null
+    private val loadedStudents = mutableListOf<IssueStudent>()
+    private val loadedBooks = mutableListOf<IssueBookItem>()
+    private var studentPage = 1
+    private var studentLastPage = 1
+    private var bookPage = 1
+    private var bookLastPage = 1
 
     fun searchStudents(query: String) {
         studentSearchQuery = query
         studentSearchJob?.cancel()
+        studentLoadMoreJob?.cancel()
         if (query.trim().length < 2) {
-            _studentSearchResults.value = emptyList()
+            resetStudentPaging()
             _studentSearchError.value = null
             _isSearchingStudents.value = false
+            _isLoadingMoreStudents.value = false
             return
         }
 
         studentSearchJob = viewModelScope.launch {
             delay(DEBOUNCE_MS)
-            repository.searchStudents(query.trim()).collect { result ->
+            studentPage = 1
+            studentLastPage = 1
+            loadedStudents.clear()
+            repository.searchStudents(query.trim(), page = studentPage, pageSize = PAGE_SIZE).collect { result ->
                 when (result) {
                     is NetworkResult.Loading -> {
                         _isSearchingStudents.value = true
@@ -91,11 +110,15 @@ class StaffIssueBookViewModel(
                     }
                     is NetworkResult.Success -> {
                         _isSearchingStudents.value = false
-                        _studentSearchResults.value = result.data.data
+                        studentPage = result.data.meta?.currentPage ?: 1
+                        studentLastPage = result.data.meta?.lastPage ?: 1
+                        loadedStudents.clear()
+                        loadedStudents.addAll(result.data.data)
+                        _studentSearchResults.value = loadedStudents.toList()
                     }
                     is NetworkResult.Error -> {
                         _isSearchingStudents.value = false
-                        _studentSearchResults.value = emptyList()
+                        resetStudentPaging()
                         _studentSearchError.value = result.message
                     }
                     is NetworkResult.Unauthorized -> {
@@ -109,10 +132,10 @@ class StaffIssueBookViewModel(
 
     fun selectStudent(student: IssueStudent) {
         _selectedStudent.value = student
-        _studentSearchResults.value = emptyList()
+        resetStudentPaging()
         studentSearchQuery = ""
         bookSearchQuery = ""
-        _bookSearchResults.value = emptyList()
+        resetBookPaging()
         _selectedBooks.value = emptyList()
         loadStudentIssueContext(student)
     }
@@ -120,8 +143,8 @@ class StaffIssueBookViewModel(
     fun clearSelectedStudent() {
         _selectedStudent.value = null
         _issuePrivileges.value = null
-        _studentSearchResults.value = emptyList()
-        _bookSearchResults.value = emptyList()
+        resetStudentPaging()
+        resetBookPaging()
         _selectedBooks.value = emptyList()
         _privilegeError.value = null
         bookSearchQuery = ""
@@ -157,24 +180,30 @@ class StaffIssueBookViewModel(
     fun searchBooks(query: String) {
         bookSearchQuery = query
         bookSearchJob?.cancel()
+        bookLoadMoreJob?.cancel()
         val student = _selectedStudent.value
         val privileges = _issuePrivileges.value
         if (student == null || privileges?.allowed != true) {
-            _bookSearchResults.value = emptyList()
+            resetBookPaging()
             _bookSearchError.value = null
             _isSearchingBooks.value = false
+            _isLoadingMoreBooks.value = false
             return
         }
         if (query.trim().length < 2) {
-            _bookSearchResults.value = emptyList()
+            resetBookPaging()
             _bookSearchError.value = null
             _isSearchingBooks.value = false
+            _isLoadingMoreBooks.value = false
             return
         }
 
         bookSearchJob = viewModelScope.launch {
             delay(DEBOUNCE_MS)
-            repository.searchBooks(query.trim(), student.id).collect { result ->
+            bookPage = 1
+            bookLastPage = 1
+            loadedBooks.clear()
+            repository.searchBooks(query.trim(), student.id, page = bookPage, pageSize = PAGE_SIZE).collect { result ->
                 when (result) {
                     is NetworkResult.Loading -> {
                         _isSearchingBooks.value = true
@@ -182,15 +211,102 @@ class StaffIssueBookViewModel(
                     }
                     is NetworkResult.Success -> {
                         _isSearchingBooks.value = false
-                        _bookSearchResults.value = result.data.data
+                        bookPage = result.data.meta?.currentPage ?: 1
+                        bookLastPage = result.data.meta?.lastPage ?: 1
+                        loadedBooks.clear()
+                        loadedBooks.addAll(result.data.data)
+                        _bookSearchResults.value = loadedBooks.toList()
                     }
                     is NetworkResult.Error -> {
                         _isSearchingBooks.value = false
-                        _bookSearchResults.value = emptyList()
+                        resetBookPaging()
                         _bookSearchError.value = result.message
                     }
                     is NetworkResult.Unauthorized -> {
                         _isSearchingBooks.value = false
+                        _unauthorized.value = true
+                    }
+                }
+            }
+        }
+    }
+
+    fun loadMoreStudents() {
+        val query = studentSearchQuery.trim()
+        if (query.length < 2 ||
+            _isSearchingStudents.value == true ||
+            _isLoadingMoreStudents.value == true ||
+            studentPage >= studentLastPage
+        ) {
+            return
+        }
+
+        studentLoadMoreJob?.cancel()
+        studentLoadMoreJob = viewModelScope.launch {
+            _isLoadingMoreStudents.value = true
+            delay(LOAD_MORE_DELAY_MS)
+            repository.searchStudents(query, page = studentPage + 1, pageSize = PAGE_SIZE).collect { result ->
+                when (result) {
+                    is NetworkResult.Loading -> Unit
+                    is NetworkResult.Success -> {
+                        studentPage = result.data.meta?.currentPage ?: (studentPage + 1)
+                        studentLastPage = result.data.meta?.lastPage ?: studentPage
+                        val knownIds = loadedStudents.map { it.id }.toMutableSet()
+                        result.data.data.forEach { student ->
+                            if (knownIds.add(student.id)) loadedStudents.add(student)
+                        }
+                        _studentSearchResults.value = loadedStudents.toList()
+                        _studentSearchError.value = null
+                        _isLoadingMoreStudents.value = false
+                    }
+                    is NetworkResult.Error -> {
+                        _studentSearchError.value = result.message
+                        _isLoadingMoreStudents.value = false
+                    }
+                    is NetworkResult.Unauthorized -> {
+                        _isLoadingMoreStudents.value = false
+                        _unauthorized.value = true
+                    }
+                }
+            }
+        }
+    }
+
+    fun loadMoreBooks() {
+        val student = _selectedStudent.value ?: return
+        val query = bookSearchQuery.trim()
+        if (query.length < 2 ||
+            _isSearchingBooks.value == true ||
+            _isLoadingMoreBooks.value == true ||
+            bookPage >= bookLastPage
+        ) {
+            return
+        }
+
+        bookLoadMoreJob?.cancel()
+        bookLoadMoreJob = viewModelScope.launch {
+            _isLoadingMoreBooks.value = true
+            delay(LOAD_MORE_DELAY_MS)
+            repository.searchBooks(query, student.id, page = bookPage + 1, pageSize = PAGE_SIZE).collect { result ->
+                when (result) {
+                    is NetworkResult.Loading -> Unit
+                    is NetworkResult.Success -> {
+                        bookPage = result.data.meta?.currentPage ?: (bookPage + 1)
+                        bookLastPage = result.data.meta?.lastPage ?: bookPage
+                        val knownIds = loadedBooks.map { it.requestId }.toMutableSet()
+                        result.data.data.forEach { book ->
+                            if (knownIds.add(book.requestId)) loadedBooks.add(book)
+                        }
+                        _bookSearchResults.value = loadedBooks.toList()
+                        _bookSearchError.value = null
+                        _isLoadingMoreBooks.value = false
+                    }
+                    is NetworkResult.Error -> {
+                        _bookSearchError.value = result.message
+                        _isLoadingMoreBooks.value = false
+                    }
+                    is NetworkResult.Unauthorized -> {
+                        _isLoadingMoreBooks.value = false
                         _unauthorized.value = true
                     }
                 }
@@ -258,7 +374,7 @@ class StaffIssueBookViewModel(
                         _isIssuing.value = false
                         _issueSuccess.value = result.data
                         _selectedBooks.value = emptyList()
-                        _bookSearchResults.value = emptyList()
+                        resetBookPaging()
                         _selectedStudent.value = null
                         _issuePrivileges.value = null
                         bookSearchQuery = ""
@@ -298,8 +414,22 @@ class StaffIssueBookViewModel(
 
     fun clearIssueForm() {
         _selectedBooks.value = emptyList()
-        _bookSearchResults.value = emptyList()
+        resetBookPaging()
         bookSearchQuery = ""
+    }
+
+    private fun resetStudentPaging() {
+        studentPage = 1
+        studentLastPage = 1
+        loadedStudents.clear()
+        _studentSearchResults.value = emptyList()
+    }
+
+    private fun resetBookPaging() {
+        bookPage = 1
+        bookLastPage = 1
+        loadedBooks.clear()
+        _bookSearchResults.value = emptyList()
     }
 
     fun clearActionMessage() {
@@ -312,5 +442,7 @@ class StaffIssueBookViewModel(
 
     private companion object {
         const val DEBOUNCE_MS = 500L
+        const val LOAD_MORE_DELAY_MS = 1_000L
+        const val PAGE_SIZE = 20
     }
 }

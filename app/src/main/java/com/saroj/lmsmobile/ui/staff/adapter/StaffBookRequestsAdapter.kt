@@ -1,13 +1,18 @@
 package com.saroj.lmsmobile.ui.staff.adapter
 
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.BitmapShader
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Shader
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -90,10 +95,13 @@ class StaffBookRequestsAdapter(
 
                 itemView.post {
                     if (avatarImage.tag == photoUrl && bitmap != null) {
-                        avatarImage.setImageDrawable(
-                            RoundedBitmapDrawableFactory.create(itemView.resources, bitmap).apply {
-                                cornerRadius = 12f * itemView.resources.displayMetrics.density
-                            }
+                        avatarImage.setImageBitmap(
+                            roundedCroppedBitmap(
+                                bitmap,
+                                avatarImage.width.takeIf { it > 0 } ?: dp(58),
+                                avatarImage.height.takeIf { it > 0 } ?: dp(58),
+                                dp(12).toFloat()
+                            )
                         )
                         avatarImage.visibility = View.VISIBLE
                         initials.visibility = View.GONE
@@ -134,6 +142,44 @@ class StaffBookRequestsAdapter(
         }
 
         private fun color(colorRes: Int): Int = ContextCompat.getColor(itemView.context, colorRes)
+
+        private fun dp(value: Int): Int =
+            (value * itemView.resources.displayMetrics.density).toInt()
+
+        private fun roundedCroppedBitmap(
+            source: Bitmap,
+            targetWidth: Int,
+            targetHeight: Int,
+            cornerRadius: Float
+        ): Bitmap {
+            val output = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(output)
+            val scale = maxOf(
+                targetWidth / source.width.toFloat(),
+                targetHeight / source.height.toFloat()
+            )
+            val scaledWidth = scale * source.width
+            val scaledHeight = scale * source.height
+            val left = (targetWidth - scaledWidth) / 2f
+            val top = (targetHeight - scaledHeight) / 2f
+
+            val shader = BitmapShader(source, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).apply {
+                setLocalMatrix(android.graphics.Matrix().apply {
+                    setScale(scale, scale)
+                    postTranslate(left, top)
+                })
+            }
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                this.shader = shader
+            }
+            canvas.drawRoundRect(
+                RectF(0f, 0f, targetWidth.toFloat(), targetHeight.toFloat()),
+                cornerRadius,
+                cornerRadius,
+                paint
+            )
+            return output
+        }
     }
 
     private data class StatusStyle(

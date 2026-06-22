@@ -216,6 +216,12 @@ class StaffIssueBookScreen : Fragment() {
             bookProgress.visibility = if (it) View.VISIBLE else View.GONE
             updateRefreshState()
         }
+        viewModel.isLoadingMoreStudents.observe(viewLifecycleOwner) {
+            studentLoadMoreProgress.visibility = if (it) View.VISIBLE else View.GONE
+        }
+        viewModel.isLoadingMoreBooks.observe(viewLifecycleOwner) {
+            bookLoadMoreProgress.visibility = if (it) View.VISIBLE else View.GONE
+        }
         viewModel.isLoadingPrivileges.observe(viewLifecycleOwner) {
             topProgress.visibility = if (it) View.VISIBLE else View.GONE
             renderPrivileges()
@@ -829,7 +835,11 @@ class StaffIssueBookScreen : Fragment() {
 
             image.post {
                 if (image.tag == photoUrl && bitmap != null) {
-                    image.setImageBitmap(bitmap)
+                    image.setImageDrawable(
+                        RoundedBitmapDrawableFactory.create(resources, bitmap).apply {
+                            cornerRadius = dp(14).toFloat()
+                        }
+                    )
                     image.visibility = View.VISIBLE
                     initial.visibility = View.GONE
                 } else {
@@ -874,7 +884,11 @@ class StaffIssueBookScreen : Fragment() {
 
             image.post {
                 if (image.tag == coverUrl && bitmap != null) {
-                    image.setImageBitmap(bitmap)
+                    image.setImageDrawable(
+                        RoundedBitmapDrawableFactory.create(resources, bitmap).apply {
+                            cornerRadius = dp(14).toFloat()
+                        }
+                    )
                     image.visibility = View.VISIBLE
                     initial.visibility = View.GONE
                 } else {

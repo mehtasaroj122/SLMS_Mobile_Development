@@ -370,7 +370,8 @@ interface ApiService {
     suspend fun getStaffBookRequests(
         @Query("status") status: String,
         @Query("search") search: String? = null,
-        @Query("per_page") pageSize: Int = 100
+        @Query("page") page: Int = 1,
+        @Query("per_page") pageSize: Int = 20
     ): Response<JsonElement>
 
     @POST("staff/book-requests/{requestId}/approve")

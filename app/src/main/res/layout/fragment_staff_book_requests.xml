@@ -382,6 +382,18 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:visibility="gone" />
+
+                    <ImageView
+                        android:id="@+id/buttonClearStaffBookRequestsSearch"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:layout_marginStart="6dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Clear search"
+                        android:padding="7dp"
+                        android:src="@drawable/ic_close"
+                        android:visibility="gone"
+                        android:tint="@color/my_requests_text_muted" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -529,6 +541,15 @@
                 android:layout_height="42dp"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="24dp"
+                android:visibility="gone" />
+
+            <ProgressBar
+                android:id="@+id/progressStaffBookRequestsLoadMore"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="6dp"
                 android:visibility="gone" />
 
             <LinearLayout

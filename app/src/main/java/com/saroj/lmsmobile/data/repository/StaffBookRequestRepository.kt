@@ -10,6 +10,7 @@ import com.saroj.lmsmobile.storage.TokenManager
 import com.saroj.lmsmobile.ui.staff.model.StaffBookRequestActionResult
 import com.saroj.lmsmobile.ui.staff.model.StaffBookRequestStatus
 import com.saroj.lmsmobile.ui.staff.model.StaffBookRequestUiModel
+import com.saroj.lmsmobile.ui.staff.model.StaffBookRequestsPageUiModel
 import com.saroj.lmsmobile.ui.staff.model.StaffBookRequestsSummaryUiModel
 import com.saroj.lmsmobile.utils.Constants
 import kotlinx.coroutines.flow.Flow
@@ -38,20 +39,48 @@ class StaffBookRequestRepository(
         emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
     }
 
-    fun getRequests(status: String, search: String): Flow<NetworkResult<List<StaffBookRequestUiModel>>> = flow {
+    fun getRequests(
+        status: String,
+        search: String,
+        page: Int = 1,
+        pageSize: Int = PAGE_SIZE
+    ): Flow<NetworkResult<StaffBookRequestsPageUiModel>> = flow {
         emit(NetworkResult.Loading())
         val normalizedSearch = search.trim().takeIf { it.isNotBlank() }
-        val response = apiService.getStaffBookRequests(status = status, search = normalizedSearch)
+        val response = apiService.getStaffBookRequests(
+            status = status,
+            search = normalizedSearch,
+            page = page,
+            pageSize = pageSize
+        )
         if (response.isSuccessful) {
             val requests = extractRequestElements(response.body()).mapIndexed { index, element ->
                 parseRequest(element, fallbackId = index + 1)
             }.sortedByDescending { it.sortDateMillis }
-            emit(NetworkResult.Success(requests))
+            emit(NetworkResult.Success(parseRequestsPage(response.body(), requests, page)))
         } else {
             emit(handleError(response))
         }
     }.catch { e ->
         emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+    }
+
+    private fun parseRequestsPage(
+        root: JsonElement?,
+        requests: List<StaffBookRequestUiModel>,
+        fallbackPage: Int
+    ): StaffBookRequestsPageUiModel {
+        val meta = root.asObjectOrNull()?.get("meta").asObjectOrNull()
+            ?: root.asObjectOrNull()?.get("pagination").asObjectOrNull()
+            ?: root.dataObject()?.get("meta").asObjectOrNull()
+            ?: root.dataObject()?.get("pagination").asObjectOrNull()
+        return StaffBookRequestsPageUiModel(
+            requests = requests,
+            currentPage = meta?.intValue("current_page", "currentPage", "page", fallback = fallbackPage)
+                ?: fallbackPage,
+            lastPage = meta?.intValue("last_page", "lastPage", "pages", fallback = fallbackPage)
+                ?: fallbackPage
+        )
     }
 
     fun approveRequest(request: StaffBookRequestUiModel): Flow<NetworkResult<StaffBookRequestActionResult>> = flow {
@@ -297,5 +326,9 @@ class StaffBookRequestRepository(
                 runCatching { value.asInt }.getOrNull()
             }
         } ?: fallback
+    }
+
+    private companion object {
+        const val PAGE_SIZE = 20
     }
 }

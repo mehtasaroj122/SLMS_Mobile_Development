@@ -30,6 +30,9 @@ class StaffBookRequestsViewModel(
     private val _isSearching = MutableLiveData(false)
     val isSearching: LiveData<Boolean> = _isSearching
 
+    private val _isLoadingMore = MutableLiveData(false)
+    val isLoadingMore: LiveData<Boolean> = _isLoadingMore
+
     private val _actionRequestId = MutableLiveData<Int?>(null)
     val actionRequestId: LiveData<Int?> = _actionRequestId
 
@@ -37,6 +40,10 @@ class StaffBookRequestsViewModel(
     private var query = ""
     private var searchJob: Job? = null
     private var requestsJob: Job? = null
+    private var loadMoreJob: Job? = null
+    private val loadedRequests = mutableListOf<StaffBookRequestUiModel>()
+    private var currentPage = 1
+    private var lastPage = 1
 
     fun loadInitial() {
         loadSummary()
@@ -51,17 +58,60 @@ class StaffBookRequestsViewModel(
     fun searchRequests(value: String) {
         query = value.trim()
         searchJob?.cancel()
+        loadMoreJob?.cancel()
         searchJob = viewModelScope.launch {
             _isSearching.value = true
             delay(SEARCH_DEBOUNCE_MS)
-            loadRequests()
+            loadRequests(page = 1, append = false)
         }
     }
 
     fun changeStatusChip(tab: StaffBookRequestsTab) {
         if (selectedTab == tab) return
         selectedTab = tab
-        loadRequests()
+        loadRequests(page = 1, append = false)
+    }
+
+    fun loadNextPage() {
+        if (_isLoadingMore.value == true ||
+            _isSearching.value == true ||
+            currentPage >= lastPage
+        ) {
+            return
+        }
+
+        loadMoreJob?.cancel()
+        loadMoreJob = viewModelScope.launch {
+            _isLoadingMore.value = true
+            delay(LOAD_MORE_DELAY_MS)
+            repository.getRequests(
+                status = selectedTab.apiValue,
+                search = query,
+                page = currentPage + 1
+            ).collect { result ->
+                when (result) {
+                    is NetworkResult.Loading -> Unit
+                    is NetworkResult.Success -> {
+                        currentPage = result.data.currentPage
+                        lastPage = result.data.lastPage
+                        val knownIds = loadedRequests.map { it.id }.toMutableSet()
+                        result.data.requests.forEach { request ->
+                            if (knownIds.add(request.id)) loadedRequests.add(request)
+                        }
+                        _requestsState.value = NetworkResult.Success(loadedRequests.toList())
+                        _isLoadingMore.value = false
+                    }
+                    is NetworkResult.Error -> {
+                        _requestsState.value = NetworkResult.Error(result.message, result.code)
+                        _isLoadingMore.value = false
+                    }
+                    is NetworkResult.Unauthorized -> {
+                        _requestsState.value = NetworkResult.Unauthorized()
+                        _isLoadingMore.value = false
+                    }
+                }
+            }
+        }
     }
 
     fun approveRequest(request: StaffBookRequestUiModel) {
@@ -98,23 +148,33 @@ class StaffBookRequestsViewModel(
         }
     }
 
-    private fun loadRequests() {
+    private fun loadRequests(page: Int = 1, append: Boolean = false) {
         requestsJob?.cancel()
         requestsJob = viewModelScope.launch {
-            repository.getRequests(selectedTab.apiValue, query).collect { result ->
+            repository.getRequests(selectedTab.apiValue, query, page = page).collect { result ->
                 when (result) {
-                    is NetworkResult.Loading -> _requestsState.value = NetworkResult.Loading()
+                    is NetworkResult.Loading -> {
+                        if (!append) _requestsState.value = NetworkResult.Loading()
+                    }
                     is NetworkResult.Success -> {
                         _isSearching.value = false
-                        _requestsState.value = result
+                        currentPage = result.data.currentPage
+                        lastPage = result.data.lastPage
+                        if (!append) loadedRequests.clear()
+                        val knownIds = loadedRequests.map { it.id }.toMutableSet()
+                        result.data.requests.forEach { request ->
+                            if (knownIds.add(request.id)) loadedRequests.add(request)
+                        }
+                        _requestsState.value = NetworkResult.Success(loadedRequests.toList())
                     }
                     is NetworkResult.Error -> {
                         _isSearching.value = false
-                        _requestsState.value = result
+                        if (!append) loadedRequests.clear()
+                        _requestsState.value = NetworkResult.Error(result.message, result.code)
                     }
                     is NetworkResult.Unauthorized -> {
                         _isSearching.value = false
-                        _requestsState.value = result
+                        _requestsState.value = NetworkResult.Unauthorized()
                     }
                 }
             }
@@ -144,5 +204,6 @@ class StaffBookRequestsViewModel(
 
     private companion object {
         const val SEARCH_DEBOUNCE_MS = 500L
+        const val LOAD_MORE_DELAY_MS = 1_000L
     }
 }

@@ -27,6 +27,12 @@ data class StaffBookRequestActionResult(
     val request: StaffBookRequestUiModel?
 )
 
+data class StaffBookRequestsPageUiModel(
+    val requests: List<StaffBookRequestUiModel>,
+    val currentPage: Int = 1,
+    val lastPage: Int = 1
+)
+
 enum class StaffBookRequestStatus(val apiValue: String) {
     PENDING("pending"),
     APPROVED("approved"),

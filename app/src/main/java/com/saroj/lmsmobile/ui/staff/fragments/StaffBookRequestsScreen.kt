@@ -11,6 +11,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import androidx.core.widget.NestedScrollView
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModel
@@ -39,9 +40,12 @@ class StaffBookRequestsScreen : Fragment() {
     private lateinit var viewModel: StaffBookRequestsViewModel
     private lateinit var adapter: StaffBookRequestsAdapter
     private lateinit var searchEditText: EditText
+    private lateinit var searchClearButton: ImageView
+    private lateinit var scrollView: NestedScrollView
     private lateinit var recyclerView: RecyclerView
     private lateinit var progressBar: ProgressBar
     private lateinit var searchProgress: ProgressBar
+    private lateinit var loadMoreProgress: ProgressBar
     private lateinit var emptyState: View
     private lateinit var emptyIcon: ImageView
     private lateinit var emptyTitle: TextView
@@ -64,6 +68,7 @@ class StaffBookRequestsScreen : Fragment() {
         setupBackNavigation(view)
         setupRecyclerView()
         setupSearch()
+        setupLoadMoreScroll()
         setupPullToRefresh()
         setupTabs(view)
         observeBookRequests()
@@ -72,9 +77,12 @@ class StaffBookRequestsScreen : Fragment() {
 
     private fun bindViews(view: View) {
         searchEditText = view.findViewById(R.id.etStaffBookRequestsSearch)
+        searchClearButton = view.findViewById(R.id.buttonClearStaffBookRequestsSearch)
+        scrollView = view.findViewById(R.id.staffBookRequestsScrollView)
         recyclerView = view.findViewById(R.id.recyclerViewStaffBookRequests)
         progressBar = view.findViewById(R.id.progressStaffBookRequests)
         searchProgress = view.findViewById(R.id.progressStaffBookRequestsSearch)
+        loadMoreProgress = view.findViewById(R.id.progressStaffBookRequestsLoadMore)
         emptyState = view.findViewById(R.id.layoutStaffBookRequestsEmpty)
         emptyIcon = view.findViewById(R.id.imageStaffBookRequestsEmpty)
         emptyTitle = view.findViewById(R.id.textStaffBookRequestsEmptyTitle)
@@ -127,8 +135,23 @@ class StaffBookRequestsScreen : Fragment() {
     }
 
     private fun setupSearch() {
+        searchClearButton.setOnClickListener {
+            searchEditText.setText("")
+        }
         searchEditText.doAfterTextChanged {
-            viewModel.searchRequests(it?.toString().orEmpty())
+            val text = it?.toString().orEmpty()
+            searchClearButton.visibility = if (text.isBlank()) View.GONE else View.VISIBLE
+            viewModel.searchRequests(text)
+        }
+    }
+
+    private fun setupLoadMoreScroll() {
+        scrollView.setOnScrollChangeListener { nestedScrollView: NestedScrollView, _, scrollY, _, _ ->
+            val content = nestedScrollView.getChildAt(0) ?: return@setOnScrollChangeListener
+            val distanceFromBottom = content.measuredHeight - nestedScrollView.measuredHeight - scrollY
+            if (distanceFromBottom <= 96) {
+                viewModel.loadNextPage()
+            }
         }
     }
 
@@ -193,6 +216,10 @@ class StaffBookRequestsScreen : Fragment() {
             searchProgress.visibility = if (isSearching) View.VISIBLE else View.GONE
         }
 
+        viewModel.isLoadingMore.observe(viewLifecycleOwner) { isLoadingMore ->
+            loadMoreProgress.visibility = if (isLoadingMore) View.VISIBLE else View.GONE
+        }
+
         viewModel.actionRequestId.observe(viewLifecycleOwner) { requestId ->
             adapter.setActionRequestId(requestId)
         }
@@ -206,12 +233,14 @@ class StaffBookRequestsScreen : Fragment() {
 
     private fun showLoading() {
         progressBar.visibility = if (swipeRefreshLayout.isRefreshing) View.GONE else View.VISIBLE
+        loadMoreProgress.visibility = View.GONE
         recyclerView.visibility = View.GONE
         emptyState.visibility = View.GONE
     }
 
     private fun showRequests(requests: List<StaffBookRequestUiModel>) {
         progressBar.visibility = View.GONE
+        loadMoreProgress.visibility = View.GONE
         swipeRefreshLayout.isRefreshing = false
         adapter.submitList(requests)
         updateEmptyState(requests.isEmpty(), viewModel.currentQuery())
@@ -219,6 +248,7 @@ class StaffBookRequestsScreen : Fragment() {
 
     private fun showError(message: String) {
         progressBar.visibility = View.GONE
+        loadMoreProgress.visibility = View.GONE
         swipeRefreshLayout.isRefreshing = false
         recyclerView.visibility = View.GONE
         emptyIcon.setImageResource(R.drawable.ic_error)

@@ -26,6 +26,7 @@ import com.saroj.lmsmobile.data.models.profile.DeleteAccountRequest
 import com.saroj.lmsmobile.data.models.profile.ProfileUpdateRequest
 import com.saroj.lmsmobile.data.models.staffdashboard.RejectBookRequestBody
 import com.saroj.lmsmobile.data.models.staffdashboard.StaffDashboardEnvelope
+import com.saroj.lmsmobile.data.models.staffstudents.StaffStudentActionResponse
 import com.saroj.lmsmobile.data.models.student.Student
 import com.saroj.lmsmobile.data.models.studentdashboard.StudentDashboardEnvelope
 import com.google.gson.JsonElement
@@ -301,6 +302,15 @@ interface ApiService {
     @GET("staff/dashboard")
     suspend fun getStaffDashboard(): Response<StaffDashboardEnvelope>
 
+    @GET("staff/students")
+    suspend fun getStaffStudents(
+        @Query("status") status: String = "all",
+        @Query("search") search: String? = null,
+        @Query("query") query: String? = search,
+        @Query("page") page: Int = 1,
+        @Query("per_page") pageSize: Int = 50
+    ): Response<JsonElement>
+
     @GET("staff/students/search")
     suspend fun searchStaffIssueStudents(
         @Query("query") query: String,
@@ -312,6 +322,13 @@ interface ApiService {
     @GET("staff/students/{studentId}")
     suspend fun getStaffIssueStudentDetail(
         @Path("studentId") studentId: Int
+    ): Response<JsonElement>
+
+    @GET("issues/student/{studentId}")
+    suspend fun getStaffStudentIssuedBooks(
+        @Path("studentId") studentId: Int,
+        @Query("page") page: Int = 1,
+        @Query("per_page") pageSize: Int = 100
     ): Response<JsonElement>
 
     @GET("staff/students/{studentId}/issue-privileges")
@@ -377,8 +394,17 @@ interface ApiService {
     suspend fun getStaffBookRequests(
         @Query("status") status: String,
         @Query("search") search: String? = null,
+        @Query("student_id") studentId: Int? = null,
         @Query("page") page: Int = 1,
         @Query("per_page") pageSize: Int = 20
+    ): Response<JsonElement>
+
+    @GET("staff/book-requests")
+    suspend fun getStaffStudentBookRequests(
+        @Query("student_id") studentId: Int,
+        @Query("status") status: String = "all",
+        @Query("page") page: Int = 1,
+        @Query("per_page") pageSize: Int = 100
     ): Response<JsonElement>
 
     @POST("staff/book-requests/{requestId}/approve")
@@ -389,6 +415,17 @@ interface ApiService {
         @Path("requestId") requestId: Int,
         @Body request: RejectBookRequestBody = RejectBookRequestBody()
     ): Response<JsonElement>
+
+    @POST("staff/book-requests/{requestId}/approve")
+    suspend fun approveStaffStudentBookRequest(
+        @Path("requestId") requestId: Int
+    ): Response<StaffStudentActionResponse>
+
+    @POST("staff/book-requests/{requestId}/reject")
+    suspend fun rejectStaffStudentBookRequest(
+        @Path("requestId") requestId: Int,
+        @Body request: RejectBookRequestBody = RejectBookRequestBody()
+    ): Response<StaffStudentActionResponse>
 
     @GET("library/settings")
     suspend fun getLibrarySettings(): Response<JsonElement>

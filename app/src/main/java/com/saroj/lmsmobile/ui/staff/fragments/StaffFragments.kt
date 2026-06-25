@@ -638,7 +638,6 @@ class StaffMoreScreen : Fragment() {
         val name = profile.name.orFallback("Staff Member")
         view.findViewById<TextView>(R.id.textStaffMoreName)?.text = name
         view.findViewById<TextView>(R.id.textStaffMoreEmail)?.text = profile.email.orFallback("Email not available")
-        view.findViewById<TextView>(R.id.textStaffMoreRole)?.text = profile.role.orFallback("Staff").titleCase()
         view.findViewById<TextView>(R.id.textStaffMoreInitials)?.text = getInitials(name)
         loadMoreProfilePhoto(view, profile.profilePhotoUrl)
     }
@@ -720,13 +719,5 @@ class StaffMoreScreen : Fragment() {
                 if (char.isLowerCase()) char.titlecase(Locale.US) else char.toString()
             }
         }
-}
-
-class StaffStudentsScreen : Fragment() {
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View = inflater.inflate(R.layout.fragment_staff_students, container, false)
 }
 

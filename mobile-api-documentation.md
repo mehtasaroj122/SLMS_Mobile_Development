@@ -1974,7 +1974,7 @@ Roles: staff/admin
 
 Purpose: Paginated mobile staff student list.
 
-Request: optional `query`, `per_page`.
+Request: optional `status` (`all`, `active`, `inactive`), `search` or `query`, `per_page`.
 
 Success Response:
 

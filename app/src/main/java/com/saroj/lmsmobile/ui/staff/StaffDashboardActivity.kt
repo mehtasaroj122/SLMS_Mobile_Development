@@ -22,6 +22,7 @@ import com.saroj.lmsmobile.ui.staff.fragments.StaffMoreScreen
 import com.saroj.lmsmobile.ui.staff.fragments.StaffNotificationsScreen
 import com.saroj.lmsmobile.ui.staff.fragments.StaffProfileScreen
 import com.saroj.lmsmobile.ui.staff.fragments.StaffReturnBookScreen
+import com.saroj.lmsmobile.ui.staff.fragments.StaffStudentDetailScreen
 import com.saroj.lmsmobile.ui.staff.fragments.StaffStudentsScreen
 
 /**
@@ -237,6 +238,10 @@ class StaffDashboardActivity : BaseActivity() {
 
     fun openStudents() {
         loadSecondaryFragment(StaffStudentsScreen())
+    }
+
+    fun openStudentDetails(studentId: Int) {
+        loadSecondaryFragment(StaffStudentDetailScreen.newInstance(studentId))
     }
 
     fun openProfile() {

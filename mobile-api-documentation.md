@@ -310,6 +310,14 @@ Notes: Useful for Android splash/session validation.
 
 ## Common/Profile APIs
 
+Staff Profile Android contract:
+
+- Use these common endpoints for staff profile screens: `GET /api/profile`, `PUT /api/profile`, `POST /api/profile/photo`, `DELETE /api/profile/photo`, `POST /api/profile/password`, `DELETE /api/profile/account`, and `POST /api/logout`.
+- All endpoints are protected by `auth:sanctum`; send `Authorization: Bearer {access_token}` and `Accept: application/json`.
+- Staff responses use the logged-in user's linked `staff` record and department. The API does not return dummy staff data.
+- Staff profile updates only write `name`, `phone`, and `address`. `email`, `role`, `username`, and staff `department` are read-only.
+- Staff account deletion uses `DELETE /api/profile/account`; it deactivates the account and revokes tokens instead of hard deleting the staff/user records.
+
 ### Get Profile
 
 Method: GET

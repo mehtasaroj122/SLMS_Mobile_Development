@@ -101,7 +101,7 @@
                 android:layout_height="104dp"
                 android:layout_gravity="center_horizontal">
 
-                <ImageView
+                <com.google.android.material.imageview.ShapeableImageView
                     android:id="@+id/imageProfileAvatar"
                     android:layout_width="92dp"
                     android:layout_height="92dp"
@@ -109,7 +109,8 @@
                     android:background="@drawable/bg_profile_avatar"
                     android:contentDescription="Profile photo"
                     android:scaleType="centerCrop"
-                    android:visibility="gone" />
+                    android:visibility="gone"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearance.LMSMobile.ProfileAvatar" />
 
                 <TextView
                     android:id="@+id/textProfileInitials"

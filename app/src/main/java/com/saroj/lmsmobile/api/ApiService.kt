@@ -22,6 +22,7 @@ import com.saroj.lmsmobile.data.models.returnbook.ProcessReturnRequest
 import com.saroj.lmsmobile.data.models.returnbook.ReturnPreviewRequest
 import com.saroj.lmsmobile.data.models.returnbook.SingleReturnRequest
 import com.saroj.lmsmobile.data.models.profile.ChangePasswordRequest
+import com.saroj.lmsmobile.data.models.profile.DeleteAccountRequest
 import com.saroj.lmsmobile.data.models.profile.ProfileUpdateRequest
 import com.saroj.lmsmobile.data.models.staffdashboard.RejectBookRequestBody
 import com.saroj.lmsmobile.data.models.staffdashboard.StaffDashboardEnvelope
@@ -87,6 +88,9 @@ interface ApiService {
     @POST("profile/change-password")
     suspend fun changePassword(@Body request: ChangePasswordRequest): Response<JsonElement>
 
+    @POST("profile/password")
+    suspend fun changeProfilePassword(@Body request: ChangePasswordRequest): Response<JsonElement>
+
     @GET("profile/delete-eligibility")
     suspend fun getProfileDeleteEligibility(): Response<JsonElement>
 
@@ -99,6 +103,9 @@ interface ApiService {
 
     @DELETE("profile")
     suspend fun deleteProfile(): Response<JsonElement>
+
+    @HTTP(method = "DELETE", path = "profile/account", hasBody = true)
+    suspend fun deleteProfileAccount(@Body request: DeleteAccountRequest): Response<JsonElement>
 
     /**
      * Test endpoint to verify if token is valid (returns 401 if invalid).

@@ -32,7 +32,7 @@
         android:layout_marginTop="22dp"
         android:background="@drawable/bg_profile_photo_preview">
 
-        <ImageView
+        <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/imagePhotoPreview"
             android:layout_width="112dp"
             android:layout_height="112dp"
@@ -40,7 +40,8 @@
             android:background="@drawable/bg_profile_avatar"
             android:contentDescription="Selected profile photo"
             android:scaleType="centerCrop"
-            android:visibility="gone" />
+            android:visibility="gone"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.LMSMobile.ProfileAvatar" />
 
         <TextView
             android:id="@+id/textPhotoPreviewInitials"

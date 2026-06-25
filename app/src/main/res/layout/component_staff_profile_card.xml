@@ -19,9 +19,19 @@
         <FrameLayout
             android:layout_width="62dp"
             android:layout_height="62dp"
-            android:background="@drawable/bg_profile_avatar">
+            android:background="@drawable/bg_profile_avatar"
+            android:clipToOutline="true">
+
+            <ImageView
+                android:id="@+id/imageStaffMoreProfile"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@null"
+                android:scaleType="centerCrop"
+                android:visibility="gone" />
 
             <TextView
+                android:id="@+id/textStaffMoreInitials"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="center"
@@ -39,6 +49,7 @@
             android:orientation="vertical">
 
             <TextView
+                android:id="@+id/textStaffMoreName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Staff Member"
@@ -47,6 +58,7 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/textStaffMoreEmail"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
@@ -55,6 +67,7 @@
                 android:textSize="13sp" />
 
             <TextView
+                android:id="@+id/textStaffMoreRole"
                 android:layout_width="wrap_content"
                 android:layout_height="26dp"
                 android:layout_marginTop="10dp"

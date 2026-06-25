@@ -193,7 +193,10 @@ class NotificationRepository(
                 tokenManager.clearAllData()
                 NetworkResult.Unauthorized()
             }
-            Constants.HTTP_FORBIDDEN -> NetworkResult.Error(Constants.ERROR_FORBIDDEN, response.code())
+            Constants.HTTP_FORBIDDEN -> NetworkResult.Error(
+                "You are not authorized to view these notifications.",
+                response.code()
+            )
             Constants.HTTP_NOT_FOUND -> NetworkResult.Error(Constants.ERROR_NOT_FOUND, response.code())
             422 -> NetworkResult.Error(message.ifBlank { "Please check your request and try again." }, response.code())
             else -> NetworkResult.Error(message, response.code())

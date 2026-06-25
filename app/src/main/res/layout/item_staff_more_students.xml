@@ -22,7 +22,7 @@
             android:layout_height="22dp"
             android:layout_gravity="center"
             android:contentDescription="Students"
-            android:src="@drawable/ic_student"
+            android:src="@drawable/ic_graduation_cap"
             app:tint="@color/more_blue" />
     </FrameLayout>
 

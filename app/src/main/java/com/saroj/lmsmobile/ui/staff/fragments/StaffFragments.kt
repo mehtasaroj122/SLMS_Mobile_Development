@@ -19,18 +19,23 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.saroj.lmsmobile.MainApplication
 import com.saroj.lmsmobile.R
 import com.saroj.lmsmobile.api.RetrofitClient
+import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.models.staffdashboard.DueTodayItem
 import com.saroj.lmsmobile.data.models.staffdashboard.OverdueBookItem
 import com.saroj.lmsmobile.data.models.staffdashboard.PendingRequestItem
 import com.saroj.lmsmobile.data.models.staffdashboard.RecentIssueItem
 import com.saroj.lmsmobile.data.models.staffdashboard.StaffDashboardData
+import com.saroj.lmsmobile.data.repository.NotificationRepository
 import com.saroj.lmsmobile.data.repository.StaffDashboardRepository
+import com.saroj.lmsmobile.data.repository.StaffProfileRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
 import com.saroj.lmsmobile.ui.staff.StaffDashboardActivity
+import com.saroj.lmsmobile.ui.staff.model.StaffProfileUiModel
 import com.saroj.lmsmobile.ui.staff.viewmodel.StaffDashboardViewModel
 import com.saroj.lmsmobile.utils.Constants
 import com.saroj.lmsmobile.utils.LmsToast
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.URL
@@ -40,6 +45,7 @@ import java.util.Locale
 
 class StaffDashboardScreen : Fragment() {
     private lateinit var viewModel: StaffDashboardViewModel
+    private lateinit var notificationRepository: NotificationRepository
     private var hasDashboardData = false
     private var refreshToastPending = false
 
@@ -55,12 +61,19 @@ class StaffDashboardScreen : Fragment() {
         setupQuickActions(view)
         observeDashboard(view)
         viewModel.loadDashboard()
+        loadNotificationCount()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        loadNotificationCount()
     }
 
     private fun setupViewModel() {
         val tokenManager = (requireActivity().application as MainApplication).tokenManager
         val apiService = RetrofitClient.getApiService(tokenManager)
         val repository = StaffDashboardRepository(apiService, tokenManager)
+        notificationRepository = NotificationRepository(apiService, tokenManager)
 
         viewModel = ViewModelProvider(
             this,
@@ -241,6 +254,29 @@ class StaffDashboardScreen : Fragment() {
         root ?: return
         root.findViewById<TextView>(R.id.textMiniValue)?.text = value
         root.findViewById<TextView>(R.id.textMiniLabel)?.text = label
+    }
+
+    private fun loadNotificationCount() {
+        if (!::notificationRepository.isInitialized) return
+        lifecycleScope.launch {
+            notificationRepository.getNotificationCount().collect { result ->
+                when (result) {
+                    is NetworkResult.Success -> {
+                        val unreadCount = result.data.unreadCount ?: 0
+                        view?.let { updateNotificationBadge(it, unreadCount) }
+                    }
+                    is NetworkResult.Unauthorized -> navigateToUnauthorized()
+                    else -> Unit
+                }
+            }
+        }
+    }
+
+    private fun updateNotificationBadge(view: View, unreadCount: Int) {
+        view.findViewById<TextView>(R.id.textHeaderNotificationBadge)?.apply {
+            text = if (unreadCount > 99) "99+" else unreadCount.toString()
+            visibility = if (unreadCount > 0) View.VISIBLE else View.GONE
+        }
     }
 
     private fun bindPendingRequests(section: View?, requests: List<PendingRequestItem>) {
@@ -496,6 +532,8 @@ class StaffDashboardScreen : Fragment() {
 }
 
 class StaffMoreScreen : Fragment() {
+    private var profilePhotoTag: String? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -503,6 +541,10 @@ class StaffMoreScreen : Fragment() {
     ): View = inflater.inflate(R.layout.fragment_staff_more, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        bindCachedProfile(view)
+        loadProfile(view)
+        loadNotificationBadge(view)
+
         val host = activity as? StaffDashboardActivity
         view.findViewById<View>(R.id.rowBookRequests)?.setOnClickListener {
             host?.openBookRequests()
@@ -520,6 +562,164 @@ class StaffMoreScreen : Fragment() {
             host?.showLogoutConfirmation()
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        view?.let {
+            loadProfile(it)
+            loadNotificationBadge(it)
+        }
+    }
+
+    private fun bindCachedProfile(view: View) {
+        val tokenManager = (requireActivity().application as MainApplication).tokenManager
+        viewLifecycleOwner.lifecycleScope.launch {
+            val name = tokenManager.getUserName().firstOrNull().orFallback("Staff Member")
+            val email = tokenManager.getUserEmail().firstOrNull().orFallback("Email not available")
+            val role = tokenManager.getUserRole().firstOrNull().orFallback("Staff").titleCase()
+            bindProfile(
+                view,
+                StaffProfileUiModel(
+                    name = name,
+                    email = email,
+                    role = role,
+                    username = "-",
+                    staffId = "-",
+                    department = "-",
+                    designation = "-",
+                    memberSince = "-",
+                    lastLogin = "-",
+                    phone = "",
+                    address = "",
+                    profilePhotoUrl = null
+                )
+            )
+        }
+    }
+
+    private fun loadProfile(view: View) {
+        val tokenManager = (requireActivity().application as MainApplication).tokenManager
+        val apiService = RetrofitClient.getApiService(tokenManager)
+        val repository = StaffProfileRepository(apiService, tokenManager)
+        viewLifecycleOwner.lifecycleScope.launch {
+            repository.getProfile().collect { result ->
+                when (result) {
+                    is NetworkResult.Success -> bindProfile(view, result.data)
+                    is NetworkResult.Unauthorized -> navigateToUnauthorized()
+                    else -> Unit
+                }
+            }
+        }
+    }
+
+    private fun loadNotificationBadge(view: View) {
+        val badge = view.findViewById<TextView>(R.id.textMoreNotificationsBadge) ?: return
+        badge.visibility = View.GONE
+
+        val tokenManager = (requireActivity().application as MainApplication).tokenManager
+        val apiService = RetrofitClient.getApiService(tokenManager)
+        val repository = NotificationRepository(apiService, tokenManager)
+        viewLifecycleOwner.lifecycleScope.launch {
+            repository.getNotificationCount().collect { result ->
+                when (result) {
+                    is NetworkResult.Success -> {
+                        val unreadCount = result.data.unreadCount ?: 0
+                        badge.text = if (unreadCount > 99) "99+" else unreadCount.toString()
+                        badge.visibility = if (unreadCount > 0) View.VISIBLE else View.GONE
+                    }
+                    is NetworkResult.Unauthorized -> navigateToUnauthorized()
+                    else -> badge.visibility = View.GONE
+                }
+            }
+        }
+    }
+
+    private fun bindProfile(view: View, profile: StaffProfileUiModel) {
+        val name = profile.name.orFallback("Staff Member")
+        view.findViewById<TextView>(R.id.textStaffMoreName)?.text = name
+        view.findViewById<TextView>(R.id.textStaffMoreEmail)?.text = profile.email.orFallback("Email not available")
+        view.findViewById<TextView>(R.id.textStaffMoreRole)?.text = profile.role.orFallback("Staff").titleCase()
+        view.findViewById<TextView>(R.id.textStaffMoreInitials)?.text = getInitials(name)
+        loadMoreProfilePhoto(view, profile.profilePhotoUrl)
+    }
+
+    private fun loadMoreProfilePhoto(view: View, rawUrl: String?) {
+        val image = view.findViewById<ImageView>(R.id.imageStaffMoreProfile) ?: return
+        val initials = view.findViewById<TextView>(R.id.textStaffMoreInitials)
+        val photoUrl = normalizeProfilePhotoUrl(rawUrl)
+
+        profilePhotoTag = photoUrl
+        image.tag = photoUrl
+        if (photoUrl.isNullOrBlank()) {
+            image.visibility = View.GONE
+            initials?.visibility = View.VISIBLE
+            return
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val bitmap = withContext(Dispatchers.IO) {
+                runCatching {
+                    URL(photoUrl).openStream().use { stream ->
+                        BitmapFactory.decodeStream(stream)
+                    }
+                }.onFailure {
+                    Log.w("StaffMore", "Profile photo failed to load: $photoUrl", it)
+                }.getOrNull()
+            }
+
+            if (bitmap != null && image.tag == photoUrl && profilePhotoTag == photoUrl) {
+                image.setImageBitmap(bitmap)
+                image.visibility = View.VISIBLE
+                initials?.visibility = View.GONE
+            } else {
+                image.visibility = View.GONE
+                initials?.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    private fun normalizeProfilePhotoUrl(rawUrl: String?): String? {
+        val value = rawUrl?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        if (!value.startsWith("http", ignoreCase = true)) {
+            return Constants.BASE_URL.removeSuffix("api/") + value.trimStart('/')
+        }
+
+        val apiRoot = Constants.BASE_URL.removeSuffix("api/").trimEnd('/')
+        return value
+            .replace("http://127.0.0.1:8000", apiRoot)
+            .replace("http://localhost:8000", apiRoot)
+            .replace("https://127.0.0.1:8000", apiRoot)
+            .replace("https://localhost:8000", apiRoot)
+    }
+
+    private fun getInitials(name: String): String {
+        return name.trim()
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+            .take(2)
+            .mapNotNull { it.firstOrNull()?.uppercaseChar()?.toString() }
+            .joinToString("")
+            .ifBlank { "ST" }
+    }
+
+    private fun navigateToUnauthorized() {
+        if (!isAdded) return
+        val intent = Intent(requireContext(), UnauthorizedActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+        requireActivity().finish()
+    }
+
+    private fun String?.orFallback(fallback: String): String =
+        if (isNullOrBlank() || this == "-") fallback else this
+
+    private fun String.titleCase(): String =
+        replace("_", " ").split(" ").filter { it.isNotBlank() }.joinToString(" ") {
+            it.lowercase(Locale.US).replaceFirstChar { char ->
+                if (char.isLowerCase()) char.titlecase(Locale.US) else char.toString()
+            }
+        }
 }
 
 class StaffStudentsScreen : Fragment() {
@@ -530,10 +730,3 @@ class StaffStudentsScreen : Fragment() {
     ): View = inflater.inflate(R.layout.fragment_staff_students, container, false)
 }
 
-class StaffNotificationsScreen : Fragment() {
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View = inflater.inflate(R.layout.fragment_staff_notifications, container, false)
-}

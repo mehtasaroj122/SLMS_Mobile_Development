@@ -155,6 +155,23 @@
                                     android:contentDescription="@null"
                                     android:src="@drawable/ic_bell"
                                     app:tint="@color/white" />
+
+                                <TextView
+                                    android:id="@+id/textHeaderNotificationBadge"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="20dp"
+                                    android:layout_gravity="top|end"
+                                    android:layout_marginTop="6dp"
+                                    android:layout_marginEnd="6dp"
+                                    android:background="@drawable/bg_notification_badge"
+                                    android:gravity="center"
+                                    android:minWidth="20dp"
+                                    android:paddingStart="5dp"
+                                    android:paddingEnd="5dp"
+                                    android:textColor="@color/white"
+                                    android:textSize="10sp"
+                                    android:textStyle="bold"
+                                    android:visibility="gone" />
                             </FrameLayout>
                         </LinearLayout>
 
@@ -278,7 +295,7 @@
                             android:id="@+id/cardIssuedBooks"
                             layout="@layout/include_staff_dashboard_stat"
                             android:layout_width="0dp"
-                            android:layout_height="108dp"
+                            android:layout_height="84dp"
                             android:layout_marginEnd="6dp"
                             android:layout_weight="1" />
 
@@ -286,7 +303,7 @@
                             android:id="@+id/cardPendingRequests"
                             layout="@layout/include_staff_dashboard_stat"
                             android:layout_width="0dp"
-                            android:layout_height="108dp"
+                            android:layout_height="84dp"
                             android:layout_marginStart="6dp"
                             android:layout_weight="1" />
                     </LinearLayout>
@@ -301,7 +318,7 @@
                             android:id="@+id/cardPendingFines"
                             layout="@layout/include_staff_dashboard_stat"
                             android:layout_width="0dp"
-                            android:layout_height="108dp"
+                            android:layout_height="84dp"
                             android:layout_marginEnd="6dp"
                             android:layout_weight="1" />
 
@@ -309,7 +326,7 @@
                             android:id="@+id/cardOverdueBooks"
                             layout="@layout/include_staff_dashboard_stat"
                             android:layout_width="0dp"
-                            android:layout_height="108dp"
+                            android:layout_height="84dp"
                             android:layout_marginStart="6dp"
                             android:layout_weight="1" />
                     </LinearLayout>

@@ -53,14 +53,15 @@ data class StaffInfo(
 )
 
 data class StaffDashboardSummary(
-    @SerializedName("currently_issued")
+    @SerializedName(value = "currently_issued", alternate = ["issued_books", "currentlyIssued"])
     val currentlyIssued: Int? = null,
-    @SerializedName("due_today")
+    @SerializedName(value = "due_today", alternate = ["dueToday"])
     val dueToday: Int? = null,
+    @SerializedName(value = "overdue", alternate = ["overdue_books", "overdueBooks"])
     val overdue: Int? = null,
-    @SerializedName("pending_requests")
+    @SerializedName(value = "pending_requests", alternate = ["pendingRequests"])
     val pendingRequests: Int? = null,
-    @SerializedName("pending_fines_amount")
+    @SerializedName(value = "pending_fines_amount", alternate = ["pending_fines", "pendingFines", "pendingFinesAmount"])
     val pendingFinesAmount: Double? = null
 )
 

@@ -94,6 +94,11 @@ class StudentMyFinesViewModel(
     }
 
     fun loadFineDetail(fine: MyFineUiModel) {
+        if (fine.id < 0) {
+            // Local fallback for items that don't have a backend fine ID yet (e.g. overdue books)
+            _fineDetailState.value = NetworkResult.Success(fine)
+            return
+        }
         viewModelScope.launch {
             repository.getFineDetail(fine.id).collect { result ->
                 _fineDetailState.value = result
@@ -133,9 +138,33 @@ class StudentMyFinesViewModel(
         val cacheSummary = tabCache[MyFinesTab.ALL]
             ?.takeIf { it.isNotEmpty() }
             ?.let { repository.buildSummaryFromFines(it) }
+        
+        val totalOutstandingAmount = cacheSummary?.outstandingAmountValue?.coerceAtLeast(summary.outstandingAmountValue)
+            ?: summary.outstandingAmountValue
+        val totalOutstandingStr = String.format(java.util.Locale.US, "₹%.2f", totalOutstandingAmount)
+
         val overdueBooks = cacheSummary?.overdueBooks?.coerceAtLeast(summary.overdueBooks)
             ?: summary.overdueBooks
-        _summaryState.value = NetworkResult.Success(summary.copy(overdueBooks = overdueBooks))
+        
+        // Also use cache summary for paid and waived totals if they are larger (ensure consistency with the list)
+        val finalPaidStr = cacheSummary?.paidAmount ?: summary.paidAmount
+        val finalWaivedStr = cacheSummary?.waivedAmount ?: summary.waivedAmount
+        val finalPaidVal = cacheSummary?.paidAmountValue ?: summary.paidAmountValue
+        val finalWaivedVal = cacheSummary?.waivedAmountValue ?: summary.waivedAmountValue
+        val finalPaidCount = cacheSummary?.paidCount ?: summary.paidCount
+        val finalWaivedCount = cacheSummary?.waivedCount ?: summary.waivedCount
+
+        _summaryState.value = NetworkResult.Success(summary.copy(
+            outstandingAmount = totalOutstandingStr,
+            outstandingAmountValue = totalOutstandingAmount,
+            overdueBooks = overdueBooks,
+            paidAmount = finalPaidStr,
+            paidAmountValue = finalPaidVal,
+            paidCount = finalPaidCount,
+            waivedAmount = finalWaivedStr,
+            waivedAmountValue = finalWaivedVal,
+            waivedCount = finalWaivedCount
+        ))
     }
 
     private fun publishFilteredFines(source: List<MyFineUiModel>? = tabCache[selectedTab]) {

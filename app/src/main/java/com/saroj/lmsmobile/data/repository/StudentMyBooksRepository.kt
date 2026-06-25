@@ -74,25 +74,74 @@ class StudentMyBooksRepository(
     private fun parseSummary(root: JsonElement?): MyBooksSummaryUiModel {
         val rootObject = root.asObjectOrNull()
         val dataObject = root.dataObject()
-        val source = dataObject?.objectValue("summary", "stats")
-            ?: rootObject?.objectValue("summary", "stats")
-            ?: dataObject
-            ?: rootObject
+        
+        // Try to find the best source object for stats
+        // We look for "summary", then "stats", then try to see if "stats" is INSIDE "summary"
+        val summaryObj = dataObject?.objectValue("summary") ?: rootObject?.objectValue("summary")
+        val statsObj = dataObject?.objectValue("stats") ?: rootObject?.objectValue("stats")
+        
+        val source = summaryObj?.objectValue("stats") 
+            ?: summaryObj 
+            ?: statsObj 
+            ?: dataObject 
+            ?: rootObject 
             ?: JsonObject()
-        val pendingFineValue = source.doubleValue("pending_fine", "pending_fines", "pendingFine")
+            
+        // Prioritize explicit "pending" keys to avoid picking up "paid" fines
+        var pendingFineValue = source.doubleValue(
+            "pending_fine", 
+            "pending_fines", 
+            "pendingFine", 
+            "total_pending_fine",
+            "unpaid_fine",
+            "unpaid_fines",
+            "fine_pending",
+            "pending_amount",
+            "amount_due"
+        )
+        
+        // If no explicit pending fine is found, try to calculate it or fall back to generic fine
+        if (pendingFineValue <= 0.0) {
+            val total = source.doubleValue("fine", "total_fine", "fine_amount", "amount", "total_amount")
+            val paid = source.doubleValue("paid_fine", "paid_fines", "total_paid_fine", "amount_paid", "paid_amount")
+            
+            pendingFineValue = if (total > 0 && paid > 0) {
+                (total - paid).coerceAtLeast(0.0)
+            } else {
+                total
+            }
+        }
+        
         return MyBooksSummaryUiModel(
-            totalIssued = source.intValue("total_issued", "issued_books", "totalIssued", "total"),
+            totalIssued = source.intValue(
+                "total_issued", 
+                "issued_books", 
+                "total_books", 
+                "total_books_issued", 
+                "total_issued_books",
+                "total_issues",
+                "all_issued",
+                "totalIssued", 
+                "total"
+            ),
             currentlyBorrowed = source.intValue(
                 "currently_borrowed",
                 "current_borrowed",
                 "borrowed_books",
                 "current_books",
                 "currently_borrowed_books",
+                "currently_issued_books",
                 "current_issued",
                 "issued_current",
+                "active_issues",
+                "active_borrowed",
+                "borrowed",
+                "current_issues",
+                "issued",
+                "active",
                 "currentlyBorrowed"
             ),
-            overdueBooks = source.intValue("overdue_books", "overdueBooks", "overdue"),
+            overdueBooks = source.intValue("overdue_books", "overdue_issues", "overdueBooks", "overdue"),
             pendingFine = formatCurrency(pendingFineValue),
             pendingFineValue = pendingFineValue
         )
@@ -122,19 +171,35 @@ class StudentMyBooksRepository(
 
     private fun parseBook(element: JsonElement, defaultStatus: MyBookStatus, index: Int): MyBookUiModel {
         val issue = element.asObjectOrNull() ?: JsonObject()
-        val book = issue.objectValue("book") ?: issue.objectValue("book_data") ?: JsonObject()
-        val bookCopy = issue.objectValue("book_copy", "bookCopy", "copy", "copy_data") ?: JsonObject()
+        val pivot = issue.objectValue("pivot")
+        val book = issue.objectValue("book") ?: issue.objectValue("book_data") ?: pivot?.objectValue("book") ?: JsonObject()
+        val bookCopy = issue.objectValue("book_copy", "bookCopy", "copy", "copy_data") ?: pivot?.objectValue("book_copy") ?: JsonObject()
         val nestedCopyBook = bookCopy.objectValue("book", "book_data") ?: JsonObject()
         val fine = issue.objectValue("fine")
             ?: issue.objectValue("fine_data")
             ?: issue.arrayValue("fines")?.firstOrNull()?.asObjectOrNull()
+            ?: pivot?.objectValue("fine")
 
         val rawIssueDate = issue.stringValue("issue_date", "issued_at", "issueDate")
         val rawDueDate = issue.stringValue("due_date", "dueDate")
         val rawReturnDate = issue.stringValue("return_date", "returned_at", "returnDate")
-        val fineAmountValue = fine?.doubleValue("amount", "fine_amount")
-            ?: issue.doubleValue("fine_amount", "fineAmount", "pending_fine")
-        val status = parseStatus(issue.stringValue("status", "issue_status"), defaultStatus)
+        
+        // Comprehensive check for fine amount in multiple possible locations and keys
+        val fineAmountValue = fine?.doubleValue("amount", "fine_amount", "value", "total", "fine", "fine_amt", "pending", "unpaid")
+            ?: issue.doubleValue("fine_amount", "fineAmount", "pending_fine", "fine", "total_fine", "fine_amt", "amount", "penalty", "late_fee", "current_fine")
+            ?: pivot?.doubleValue("fine_amount", "fine", "amount", "pending_fine")
+            ?: 0.0
+        
+        val rawStatus = issue.stringValue("status", "issue_status")
+        var status = parseStatus(rawStatus, defaultStatus)
+
+        // Manual overdue check: if it's not returned and due date has passed, it's OVERDUE
+        if (status != MyBookStatus.RETURNED) {
+            val dueDateMillis = parseDateMillis(rawDueDate)
+            if (dueDateMillis > 0 && dueDateMillis < System.currentTimeMillis()) {
+                status = MyBookStatus.OVERDUE
+            }
+        }
 
         return MyBookUiModel(
             issueId = issue.intValue("id", "issue_id", fallback = fallbackIssueId(defaultStatus, index)),
@@ -167,9 +232,7 @@ class StudentMyBooksRepository(
                 ),
                 amount = fineAmountValue,
                 fine = fine,
-                issue = issue,
-                bookStatus = status,
-                rawReturnDate = rawReturnDate
+                issue = issue
             ),
             coverImageUrl = book.stringValue(
                 "cover_image",
@@ -237,9 +300,7 @@ class StudentMyBooksRepository(
         rawStatus: String?,
         amount: Double,
         fine: JsonObject?,
-        issue: JsonObject,
-        bookStatus: MyBookStatus,
-        rawReturnDate: String?
+        issue: JsonObject
     ): FineStatus {
         if (rawStatus?.trim()?.lowercase(Locale.US) == "waived") return FineStatus.WAIVED
 
@@ -251,15 +312,11 @@ class StudentMyBooksRepository(
             return FineStatus.PAID
         }
 
-        if (amount > 0.0 && (bookStatus == MyBookStatus.RETURNED || !rawReturnDate.isNullOrBlank())) {
-            return FineStatus.PAID
-        }
-
         return when (rawStatus?.trim()?.lowercase(Locale.US)) {
-            "paid", "completed", "settled" -> FineStatus.PAID
+            "paid", "completed", "settled", "paid_fine", "paidfine" -> FineStatus.PAID
             "waived" -> FineStatus.WAIVED
-            "pending", "unpaid", "due", "not_paid", "not paid" -> FineStatus.UNPAID
-            "none", "no_fine", "no fine" -> FineStatus.NONE
+            "pending", "unpaid", "due", "not_paid", "not paid", "pending_fine", "unpaid_fine" -> FineStatus.UNPAID
+            "none", "no_fine", "no fine", "0", "false" -> FineStatus.NONE
             else -> if (amount > 0.0) FineStatus.UNPAID else FineStatus.NONE
         }
     }
@@ -376,8 +433,15 @@ class StudentMyBooksRepository(
 
     private fun JsonObject.doubleValue(vararg keys: String): Double {
         return keys.firstNotNullOfOrNull { key ->
-            get(key)?.takeIf { !it.isJsonNull && it.isJsonPrimitive }?.let { value ->
-                runCatching { value.asDouble }.getOrNull()
+            get(key)?.takeIf { !it.isJsonNull && it.isJsonPrimitive }?.asJsonPrimitive?.let { value ->
+                runCatching { 
+                    if (value.isNumber) {
+                        value.asDouble 
+                    } else {
+                        val str = value.asString.replace(Regex("[^0-9.]"), "")
+                        str.toDoubleOrNull() ?: value.asDouble
+                    }
+                }.getOrNull()
             }
         } ?: 0.0
     }

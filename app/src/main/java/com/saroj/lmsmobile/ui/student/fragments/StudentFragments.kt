@@ -116,6 +116,7 @@ class StudentDashboardFragment : Fragment() {
         val tokenManager = (requireActivity().application as MainApplication).tokenManager
         val apiService = RetrofitClient.getApiService(tokenManager)
         val repository = StudentDashboardRepository(apiService, tokenManager)
+        val finesRepository = StudentMyFinesRepository(apiService, tokenManager)
         notificationRepository = NotificationRepository(apiService, tokenManager)
 
         viewModel = ViewModelProvider(
@@ -123,7 +124,7 @@ class StudentDashboardFragment : Fragment() {
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return StudentDashboardViewModel(repository) as T
+                    return StudentDashboardViewModel(repository, finesRepository) as T
                 }
             }
         )[StudentDashboardViewModel::class.java]
@@ -1130,13 +1131,14 @@ class StudentMyBooksFragment : Fragment() {
         val tokenManager = (requireActivity().application as MainApplication).tokenManager
         val apiService = RetrofitClient.getApiService(tokenManager)
         val repository = StudentMyBooksRepository(apiService, tokenManager)
+        val finesRepository = StudentMyFinesRepository(apiService, tokenManager)
 
         viewModel = ViewModelProvider(
             this,
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return StudentMyBooksViewModel(repository) as T
+                    return StudentMyBooksViewModel(repository, finesRepository) as T
                 }
             }
         )[StudentMyBooksViewModel::class.java]

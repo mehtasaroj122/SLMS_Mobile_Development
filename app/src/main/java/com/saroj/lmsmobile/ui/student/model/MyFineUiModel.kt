@@ -13,7 +13,8 @@ data class MyFineUiModel(
     val publisher: String = "",
     val coverImageUrl: String? = null,
     val amountValue: Double = 0.0,
-    val dueDateSort: Long = 0L
+    val dueDateSort: Long = 0L,
+    val issueId: Int? = null
 )
 
 enum class MyFineStatus {

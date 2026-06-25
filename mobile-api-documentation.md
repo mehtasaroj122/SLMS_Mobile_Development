@@ -18,10 +18,12 @@ Authentication: Protected routes use Sanctum bearer tokens. Send `Authorization:
 | GET | `/api/auth/check` | Yes | student/staff/admin | Check token and user |
 | GET | `/api/profile` | Yes | student/staff/admin | Get profile |
 | PUT | `/api/profile` | Yes | student/staff/admin | Update profile |
+| POST | `/api/profile/password` | Yes | student/staff/admin | Change password |
 | POST | `/api/profile/change-password` | Yes | student/staff/admin | Change password |
 | POST | `/api/profile/photo` | Yes | student/staff/admin | Upload profile photo |
 | DELETE | `/api/profile/photo` | Yes | student/staff/admin | Remove profile photo |
 | GET | `/api/profile/delete-eligibility` | Yes | student/staff/admin | Check student account deletion eligibility |
+| DELETE | `/api/profile/account` | Yes | student/staff | Deactivate own account |
 | DELETE | `/api/profile` | Yes | student | Deactivate student account |
 | GET | `/api/books` | Yes | student/staff/admin | List catalog books |
 | GET | `/api/books/search` | Yes | student/staff/admin | Search catalog |
@@ -109,7 +111,7 @@ Unauthorized role:
 Validation:
 
 ```json
-{"message":"The given data was invalid.","errors":{"field":["Validation message."]}}
+{"success":false,"message":"The given data was invalid.","errors":{"field":["Validation message."]}}
 ```
 
 Not found:
@@ -118,10 +120,10 @@ Not found:
 {"message":"Resource not found."}
 ```
 
-New staff endpoints use:
+Profile/staff endpoints use:
 
 ```json
-{"success":false,"message":"Validation failed.","errors":{"field":["Validation message."]}}
+{"success":false,"message":"The given data was invalid.","errors":{"field":["Validation message."]}}
 ```
 
 ## Authentication APIs
@@ -263,7 +265,7 @@ Request: none.
 Success Response:
 
 ```json
-{"message":"Logout successful."}
+{"success":true,"message":"Logout successful.","data":[]}
 ```
 
 Error Response:
@@ -318,14 +320,14 @@ Auth: Required
 
 Roles: student/staff/admin
 
-Purpose: Return the authenticated user's profile.
+Purpose: Return the authenticated user's real profile. For staff users, this returns the logged-in staff user's linked staff record and department.
 
 Request: none.
 
 Success Response:
 
 ```json
-{"data":{"id":1,"name":"Anil Kapoor","email":"staff@example.com","role":"staff","status":"active"}}
+{"success":true,"message":"Profile fetched successfully.","data":{"id":1,"name":"Anil Kapoor","email":"staff@example.com","username":null,"phone":"9800000000","address":"Kathmandu","role":"staff","status":"active","profile_photo":"profile_photos/file.jpg","profile_photo_url":"http://YOUR_SERVER/storage/profile_photos/file.jpg","staff":{"id":2,"staff_id":"STF-001","department_id":1,"department":"Library","designation":"Librarian","join_date":"2026-01-20"}}}
 ```
 
 Error Response:
@@ -336,7 +338,7 @@ Error Response:
 
 Controller: `AuthController@profile`
 
-Notes: Uses `UserResource`.
+Notes: Uses Sanctum auth and `UserResource`. Email, role, username, and department are read-only.
 
 ### Update Profile
 
@@ -348,31 +350,37 @@ Auth: Required
 
 Roles: student/staff/admin
 
-Purpose: Update common profile fields.
+Purpose: Update editable common profile fields for the authenticated user.
 
-Request: `name`, `email`, `phone`, `gender`, `address` optional according to `ProfileUpdateRequest`.
+Request body:
+
+```json
+{"name":"Updated Name","phone":"9812345678","address":"Kathmandu"}
+```
+
+Only `name`, `phone`, and `address` are accepted. Email, role, username, and department are read-only and are not updated by this endpoint.
 
 Success Response:
 
 ```json
-{"message":"Profile updated successfully.","data":{"id":1,"name":"Updated Name","email":"staff@example.com"}}
+{"success":true,"message":"Profile updated successfully.","data":{"id":1,"name":"Updated Name","email":"staff@example.com","phone":"9812345678","address":"Kathmandu","role":"staff","staff":{"id":2,"staff_id":"STF-001","department":"Library"}}}
 ```
 
 Error Response:
 
 ```json
-{"message":"The given data was invalid.","errors":{"email":["The email has already been taken."]}}
+{"success":false,"message":"The given data was invalid.","errors":{"phone":["The phone has already been taken."]}}
 ```
 
 Controller: `ProfileController@update`
 
 Notes: Logs profile changes through `ActivityLogger`.
 
-### Change Password
+### Change Profile Password
 
 Method: POST
 
-Endpoint: `/api/profile/change-password`
+Endpoint: `/api/profile/password`
 
 Auth: Required
 
@@ -380,23 +388,27 @@ Roles: student/staff/admin
 
 Purpose: Change password for the authenticated user.
 
-Request: `current_password`, `password`, `password_confirmation`.
+Request body:
+
+```json
+{"current_password":"OldPassword!123","password":"NewPassword!123","password_confirmation":"NewPassword!123"}
+```
 
 Success Response:
 
 ```json
-{"message":"Password changed successfully."}
+{"success":true,"message":"Password changed successfully.","data":[]}
 ```
 
 Error Response:
 
 ```json
-{"message":"The given data was invalid.","errors":{"current_password":["The current password is incorrect."]}}
+{"success":false,"message":"The given data was invalid.","errors":{"current_password":["The current password is incorrect."]}}
 ```
 
 Controller: `ProfileController@changePassword`
 
-Notes: Clears forced password change flag.
+Notes: Verifies the current password, validates the new password, clears the forced password change flag, and keeps legacy alias `/api/profile/change-password`.
 
 ### Upload Profile Photo
 
@@ -410,23 +422,23 @@ Roles: student/staff/admin
 
 Purpose: Upload profile photo.
 
-Request: multipart `photo` image, max 2048 KB, jpg/jpeg/png/webp.
+Request body: `multipart/form-data` with `photo` image file. Allowed types: jpg, jpeg, png, webp. Max size: 2048 KB.
 
 Success Response:
 
 ```json
-{"message":"Profile photo uploaded successfully.","profile_photo":"profile_photos/file.jpg","profile_photo_url":"http://localhost/storage/profile_photos/file.jpg"}
+{"success":true,"message":"Profile photo uploaded successfully.","data":{"profile_photo":"profile_photos/file.jpg","profile_photo_url":"http://YOUR_SERVER/storage/profile_photos/file.jpg"},"profile_photo":"profile_photos/file.jpg","profile_photo_url":"http://YOUR_SERVER/storage/profile_photos/file.jpg"}
 ```
 
 Error Response:
 
 ```json
-{"message":"The given data was invalid.","errors":{"photo":["The photo field is required."]}}
+{"success":false,"message":"The given data was invalid.","errors":{"photo":["The photo field is required."]}}
 ```
 
 Controller: `ProfileController@uploadPhoto`
 
-Notes: Deletes previous stored photo.
+Notes: Stores the file on the public disk, deletes any previous stored profile photo, saves `users.profile_photo`, and returns a public photo URL.
 
 ### Remove Profile Photo
 
@@ -445,7 +457,7 @@ Request: none.
 Success Response:
 
 ```json
-{"message":"Profile photo removed successfully.","profile_photo":null,"profile_photo_url":null}
+{"success":true,"message":"Profile photo removed successfully.","data":{"profile_photo":null,"profile_photo_url":null},"profile_photo":null,"profile_photo_url":null}
 ```
 
 Error Response:
@@ -456,7 +468,41 @@ Error Response:
 
 Controller: `ProfileController@removePhoto`
 
-Notes: Returns success even when no photo exists.
+Notes: Deletes the stored photo file when present and sets `users.profile_photo` to null.
+
+### Delete Account
+
+Method: DELETE
+
+Endpoint: `/api/profile/account`
+
+Auth: Required
+
+Roles: student/staff
+
+Purpose: Deactivate the authenticated mobile account after password and DELETE text confirmation. Staff accounts are not hard deleted, so issued books, fines, book requests, and activity history remain intact.
+
+Request body:
+
+```json
+{"current_password":"Password!123","confirmation_text":"DELETE"}
+```
+
+Success Response:
+
+```json
+{"success":true,"message":"Your account has been deactivated successfully.","data":{"status":"inactive"}}
+```
+
+Error Response:
+
+```json
+{"success":false,"message":"The given data was invalid.","errors":{"current_password":["The current password is incorrect."]}}
+```
+
+Controller: `ProfileController@destroyAccount`
+
+Notes: Student accounts must pass active-issued-book, pending-fine, and active-request checks. Staff accounts are deactivated by setting `users.status` to `inactive`; all tokens are revoked.
 
 ### Delete Eligibility
 
@@ -486,9 +532,9 @@ Error Response:
 
 Controller: `ProfileController@deleteEligibility`
 
-Notes: Staff/admin accounts cannot be deleted from mobile.
+Notes: Legacy helper for student deletion checks. Staff users should call `DELETE /api/profile/account` when deactivating their own account.
 
-### Delete Profile
+### Delete Profile Legacy
 
 Method: DELETE
 
@@ -516,7 +562,7 @@ Error Response:
 
 Controller: `ProfileController@destroy`
 
-Notes: Deletes all current tokens after deactivation.
+Notes: Legacy student-only endpoint. Android staff profile should use `DELETE /api/profile/account`.
 
 ### General Dashboard
 

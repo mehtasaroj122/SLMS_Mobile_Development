@@ -7,10 +7,14 @@ import androidx.lifecycle.viewModelScope
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.models.studentdashboard.StudentDashboardResponse
 import com.saroj.lmsmobile.data.repository.StudentDashboardRepository
+import com.saroj.lmsmobile.data.repository.StudentMyFinesRepository
+import com.saroj.lmsmobile.ui.student.model.MyFineStatus
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 class StudentDashboardViewModel(
-    private val repository: StudentDashboardRepository
+    private val repository: StudentDashboardRepository,
+    private val finesRepository: StudentMyFinesRepository
 ) : ViewModel() {
 
     private val _dashboardData = MutableLiveData<StudentDashboardResponse>()
@@ -39,26 +43,37 @@ class StudentDashboardViewModel(
 
     private fun fetchDashboard() {
         viewModelScope.launch {
-            repository.getStudentDashboard().collect { result ->
-                when (result) {
-                    is NetworkResult.Loading -> {
-                        _isLoading.value = true
-                        _errorMessage.value = null
+            repository.getStudentDashboard()
+                .combine(finesRepository.getAllFines()) { dashboardResult, finesResult ->
+                    if (dashboardResult is NetworkResult.Success && finesResult is NetworkResult.Success) {
+                        val totalPendingFine = finesResult.data
+                            .filter { it.status == MyFineStatus.PENDING }
+                            .sumOf { it.amountValue }
+                        val updatedStats = dashboardResult.data.stats?.copy(pending_fines = totalPendingFine)
+                        NetworkResult.Success(dashboardResult.data.copy(stats = updatedStats))
+                    } else {
+                        dashboardResult
                     }
-                    is NetworkResult.Success -> {
-                        _isLoading.value = false
-                        _dashboardData.value = result.data
-                    }
-                    is NetworkResult.Error -> {
-                        _isLoading.value = false
-                        _errorMessage.value = result.message
-                    }
-                    is NetworkResult.Unauthorized -> {
-                        _isLoading.value = false
-                        _unauthorized.value = true
+                }.collect { result ->
+                    when (result) {
+                        is NetworkResult.Loading -> {
+                            _isLoading.value = true
+                            _errorMessage.value = null
+                        }
+                        is NetworkResult.Success -> {
+                            _isLoading.value = false
+                            _dashboardData.value = result.data
+                        }
+                        is NetworkResult.Error -> {
+                            _isLoading.value = false
+                            _errorMessage.value = result.message
+                        }
+                        is NetworkResult.Unauthorized -> {
+                            _isLoading.value = false
+                            _unauthorized.value = true
+                        }
                     }
                 }
-            }
         }
     }
 }

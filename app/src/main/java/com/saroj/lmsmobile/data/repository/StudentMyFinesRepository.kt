@@ -38,11 +38,11 @@ class StudentMyFinesRepository(
         emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
     }
 
-    fun getAllFines(): Flow<NetworkResult<List<MyFineUiModel>>> = loadFines {
+    fun getAllFines(): Flow<NetworkResult<List<MyFineUiModel>>> = loadFines(includeOverdue = true) {
         apiService.getAuthenticatedStudentFines()
     }
 
-    fun getPendingFines(): Flow<NetworkResult<List<MyFineUiModel>>> = loadFines {
+    fun getPendingFines(): Flow<NetworkResult<List<MyFineUiModel>>> = loadFines(includeOverdue = true) {
         apiService.getAuthenticatedStudentPendingFines()
     }
 
@@ -67,21 +67,24 @@ class StudentMyFinesRepository(
         val paid = fines.filter { it.status == MyFineStatus.PAID }
         val waived = fines.filter { it.status == MyFineStatus.WAIVED }
 
+        val outstandingAmountValue = pending.sumOf { it.amountValue }
+
         return MyFinesSummaryUiModel(
-            outstandingAmount = formatCurrency(pending.sumOf { it.amountValue }),
+            outstandingAmount = formatCurrency(outstandingAmountValue),
             outstandingCount = pending.size,
             paidAmount = formatCompactCurrency(paid.sumOf { it.amountValue }),
             paidCount = paid.size,
             waivedAmount = formatCurrency(waived.sumOf { it.amountValue }),
             waivedCount = waived.size,
             overdueBooks = pending.count { it.daysOverdue.toIntOrNull()?.let { days -> days > 0 } == true },
-            outstandingAmountValue = pending.sumOf { it.amountValue },
+            outstandingAmountValue = outstandingAmountValue,
             paidAmountValue = paid.sumOf { it.amountValue },
             waivedAmountValue = waived.sumOf { it.amountValue }
         )
     }
 
     private fun loadFines(
+        includeOverdue: Boolean = false,
         request: suspend () -> Response<JsonElement>
     ): Flow<NetworkResult<List<MyFineUiModel>>> = flow {
         emit(NetworkResult.Loading())
@@ -90,7 +93,24 @@ class StudentMyFinesRepository(
             val fines = extractFineElements(response.body()).mapIndexed { index, element ->
                 parseFine(element, fallbackId = index + 1)
             }
-            emit(NetworkResult.Success(fines.sortedByDescending { it.dueDateSort }))
+
+            var result = fines
+            if (includeOverdue) {
+                // Fetch current books to catch overdue ones that might be missing from the fines list
+                val booksResponse = apiService.getStudentMyBooksCurrent()
+                if (booksResponse.isSuccessful) {
+                    val overdueFromBooks = extractBookElements(booksResponse.body())
+                        .mapIndexed { i, el -> parseBookAsFine(el, i) }
+                        .filter { it.daysOverdue != "-" && it.status == MyFineStatus.PENDING }
+                    
+                    // Merge: keep all original fines, add overdue books ONLY if their issueId isn't already there
+                    val existingIssueIds = fines.mapNotNull { it.issueId }.toSet()
+                    val missingOverdue = overdueFromBooks.filter { it.issueId !in existingIssueIds }
+                    result = fines + missingOverdue
+                }
+            }
+
+            emit(NetworkResult.Success(result.sortedByDescending { it.dueDateSort }))
         } else {
             emit(handleError(response))
         }
@@ -193,8 +213,13 @@ class StudentMyFinesRepository(
         val daysOverdue = resolveDaysOverdue(fine, issue, rawDueDate)
         val rawReason = fine.stringValue("reason", "fine_reason", "type", "remarks", "description")
 
+        // Use a unique ID: use fine ID if exists, otherwise a negative issue ID for virtual fines
+        val stableId = fine.intValueNullable("id", "fine_id") 
+            ?: issue.intValueNullable("id", "issue_id")?.let { -it } 
+            ?: fallbackId
+
         return MyFineUiModel(
-            id = fine.intValue("id", "fine_id", fallback = fallbackId),
+            id = stableId,
             bookTitle = book.stringValue("title", "book_title")
                 ?: fine.stringValue("book_title", "title")
                 ?: issue.stringValue("book_title", "title")
@@ -237,7 +262,8 @@ class StudentMyFinesRepository(
             amount = formatCurrency(amountValue),
             status = status,
             amountValue = amountValue,
-            dueDateSort = parseDateMillis(rawDueDate)
+            dueDateSort = parseDateMillis(rawDueDate),
+            issueId = issue.intValueNullable("id", "issue_id")
         )
     }
 
@@ -288,8 +314,9 @@ class StudentMyFinesRepository(
         val explicitDays = fine.intValueNullable(
             "days_overdue",
             "overdue_days",
-            "daysOverdue"
-        ) ?: issue.intValueNullable("days_overdue", "overdue_days", "daysOverdue")
+            "daysOverdue",
+            "days_late"
+        ) ?: issue.intValueNullable("days_overdue", "overdue_days", "daysOverdue", "days_late")
 
         explicitDays?.let { return if (it <= 0) "-" else it.toString() }
 
@@ -380,6 +407,74 @@ class StudentMyFinesRepository(
 
     private fun JsonElement?.asObjectOrNull(): JsonObject? {
         return if (this != null && isJsonObject) asJsonObject else null
+    }
+
+    private fun parseBookAsFine(element: JsonElement, index: Int): MyFineUiModel {
+        val issue = element.asObjectOrNull() ?: JsonObject()
+        val pivot = issue.objectValue("pivot")
+        val book = issue.objectValue("book") ?: issue.objectValue("book_data") ?: pivot?.objectValue("book") ?: JsonObject()
+        
+        // Extract fine object if it exists
+        val fine = issue.objectValue("fine")
+            ?: issue.objectValue("fine_data")
+            ?: issue.arrayValue("fines")?.firstOrNull()?.asObjectOrNull()
+            ?: pivot?.objectValue("fine")
+
+        val rawDueDate = issue.stringValue("due_date", "dueDate")
+        val dueDateSort = parseDateMillis(rawDueDate)
+        val daysOverdue = resolveDaysOverdue(JsonObject(), issue, rawDueDate)
+        val isOverdue = daysOverdue != "-" && (daysOverdue.toIntOrNull() ?: 0) > 0
+
+        // Comprehensive check for fine amount exactly like MyBooksRepository
+        val fineAmount = fine?.doubleValue("amount", "fine_amount", "value", "total", "fine", "fine_amt", "pending", "unpaid")
+            ?: issue.doubleValue("fine_amount", "fineAmount", "pending_fine", "fine", "total_fine", "fine_amt", "amount", "penalty", "late_fee", "current_fine")
+            ?: pivot?.doubleValue("fine_amount", "fine", "amount", "pending_fine")
+            ?: 0.0
+
+        return MyFineUiModel(
+            id = -1000 - (issue.intValue("id", "issue_id", fallback = index + 1)),
+            bookTitle = book.stringValue("title") ?: "Untitled Book",
+            reason = if (isOverdue) "Overdue" else "Current Issue",
+            dueDate = formatDate(rawDueDate),
+            daysOverdue = daysOverdue,
+            amount = formatCurrency(fineAmount),
+            status = MyFineStatus.PENDING,
+            author = book.stringValue("author") ?: "",
+            isbn = book.stringValue("isbn") ?: "",
+            coverImageUrl = book.stringValue("cover_image", "cover_url"),
+            amountValue = fineAmount,
+            dueDateSort = dueDateSort,
+            issueId = issue.intValueNullable("id", "issue_id")
+        )
+    }
+
+    private fun JsonObject.arrayValue(vararg keys: String): List<JsonElement>? {
+        return keys.firstNotNullOfOrNull { key ->
+            val value = get(key)
+            if (value?.isJsonArray == true) value.asJsonArray.toList() else null
+        }
+    }
+
+    private fun extractBookElements(root: JsonElement?): List<JsonElement> {
+        if (root == null || root.isJsonNull) return emptyList()
+        if (root.isJsonArray) return root.asJsonArray.toList()
+
+        val data = root.dataElement()
+        if (data?.isJsonArray == true) return data.asJsonArray.toList()
+        if (data?.isJsonObject == true) {
+            val dataObject = data.asJsonObject
+            listOf("data", "books", "items", "current", "history", "due_soon").forEach { key ->
+                val nested = dataObject.get(key)
+                if (nested?.isJsonArray == true) return nested.asJsonArray.toList()
+            }
+        }
+
+        val rootObject = root.asObjectOrNull() ?: return emptyList()
+        listOf("books", "items", "current", "history", "due_soon").forEach { key ->
+            val nested = rootObject.get(key)
+            if (nested?.isJsonArray == true) return nested.asJsonArray.toList()
+        }
+        return emptyList()
     }
 
     private fun JsonObject.objectValue(vararg keys: String): JsonObject? {

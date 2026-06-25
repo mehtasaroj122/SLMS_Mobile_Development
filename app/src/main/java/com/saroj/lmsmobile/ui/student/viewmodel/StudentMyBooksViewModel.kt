@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.repository.StudentMyBooksRepository
+import com.saroj.lmsmobile.data.repository.StudentMyFinesRepository
 import com.saroj.lmsmobile.ui.student.model.FineStatus
 import com.saroj.lmsmobile.ui.student.model.MyBookStatus
 import com.saroj.lmsmobile.ui.student.model.MyBookUiModel
@@ -14,12 +15,14 @@ import com.saroj.lmsmobile.ui.student.model.MyBooksSortOption
 import com.saroj.lmsmobile.ui.student.model.MyBooksStatusFilter
 import com.saroj.lmsmobile.ui.student.model.MyBooksSummaryUiModel
 import com.saroj.lmsmobile.ui.student.model.MyBooksTab
+import com.saroj.lmsmobile.ui.student.model.MyFineStatus
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.util.Locale
 
 class StudentMyBooksViewModel(
-    private val repository: StudentMyBooksRepository
+    private val repository: StudentMyBooksRepository,
+    private val finesRepository: StudentMyFinesRepository
 ) : ViewModel() {
 
     private val _summaryState = MutableLiveData<NetworkResult<MyBooksSummaryUiModel>>()
@@ -119,8 +122,25 @@ class StudentMyBooksViewModel(
                     serverSummary = result.data
                 }
                 _summaryState.value = result
-                if (result is NetworkResult.Success && result.data.looksEmpty()) {
-                    publishSummaryFromCacheIfNeeded()
+                synchronizePendingFine()
+            }
+        }
+    }
+
+    private fun synchronizePendingFine() {
+        viewModelScope.launch {
+            finesRepository.getAllFines().collect { result ->
+                if (result is NetworkResult.Success) {
+                    val allFines = result.data
+                    val totalPending = allFines.filter { it.status == MyFineStatus.PENDING }.sumOf { it.amountValue }
+                    val currentSummary = serverSummary ?: buildSummaryFromCache()
+                    
+                    val updatedSummary = currentSummary.copy(
+                        pendingFine = formatCurrency(totalPending),
+                        pendingFineValue = totalPending
+                    )
+                    serverSummary = updatedSummary
+                    _summaryState.value = NetworkResult.Success(updatedSummary)
                 }
             }
         }
@@ -149,11 +169,30 @@ class StudentMyBooksViewModel(
 
     private fun publishSummaryFromCacheIfNeeded() {
         val summary = serverSummary
+        val built = buildSummaryFromCache()
         val cachedBooks = tabCache.values.flatten()
-        if (cachedBooks.isEmpty()) return
-        if (summary != null && !summary.looksEmpty()) return
+        
+        if (cachedBooks.isEmpty() && summary == null) return
 
-        _summaryState.value = NetworkResult.Success(buildSummaryFromCache())
+        if (summary == null) {
+            _summaryState.value = NetworkResult.Success(built)
+            return
+        }
+
+        // Merge logic: use whichever value is larger for counts,
+        // and whichever value is larger for fine amount
+        // Use maxOf for fine value to ensure it includes both book-specific fines and general fines
+        val finalFineValue = maxOf(built.pendingFineValue, summary.pendingFineValue)
+        val finalFineString = if (finalFineValue == built.pendingFineValue) built.pendingFine else summary.pendingFine
+
+        val merged = built.copy(
+            totalIssued = maxOf(summary.totalIssued, built.totalIssued),
+            currentlyBorrowed = maxOf(summary.currentlyBorrowed, built.currentlyBorrowed),
+            overdueBooks = maxOf(summary.overdueBooks, built.overdueBooks),
+            pendingFine = finalFineString,
+            pendingFineValue = finalFineValue
+        )
+        _summaryState.value = NetworkResult.Success(merged)
     }
 
     private fun buildSummaryFromCache(): MyBooksSummaryUiModel {

@@ -1,9 +1,13 @@
 package com.saroj.lmsmobile.data.repository
 
+import com.google.gson.Gson
 import com.saroj.lmsmobile.api.ApiService
+import com.saroj.lmsmobile.data.models.auth.ForgotPasswordRequest
+import com.saroj.lmsmobile.data.models.auth.ForgotPasswordResponse
 import com.saroj.lmsmobile.data.models.auth.LoginRequest
 import com.saroj.lmsmobile.data.models.auth.LoginResponse
 import com.saroj.lmsmobile.data.models.auth.ProfileResponse
+import com.saroj.lmsmobile.data.models.common.ErrorResponse
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.storage.TokenManager
 import com.saroj.lmsmobile.utils.Constants
@@ -35,6 +39,7 @@ class AuthRepository(
     private val apiService: ApiService,
     private val tokenManager: TokenManager
 ) {
+    private val gson = Gson()
 
     /**
      * Performs login with email and password.
@@ -97,6 +102,40 @@ class AuthRepository(
         }
     }.catch { e ->
         android.util.Log.e("AuthRepository", "Login catch: ${e.message}")
+        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+    }
+
+    fun forgotPassword(email: String): Flow<NetworkResult<ForgotPasswordResponse>> = flow {
+        emit(NetworkResult.Loading())
+
+        val response = apiService.forgotPassword(ForgotPasswordRequest(email))
+        if (response.isSuccessful) {
+            val body = response.body()
+            when {
+                body == null -> emit(NetworkResult.Error("Empty response from server", response.code()))
+                body.success -> emit(NetworkResult.Success(body))
+                else -> emit(
+                    NetworkResult.Error(
+                        body.message?.takeIf { it.isNotBlank() }
+                            ?: "We can't find a user with that email address.",
+                        response.code()
+                    )
+                )
+            }
+            return@flow
+        }
+
+        val parsedError = parseError(response.errorBody()?.string())
+        emit(
+            NetworkResult.Error(
+                parsedError.firstMessage()
+                    ?: response.message().takeIf { it.isNotBlank() }
+                    ?: "We can't find a user with that email address.",
+                response.code()
+            )
+        )
+    }.catch { e ->
+        android.util.Log.e("AuthRepository", "Forgot password error: ${e.message}")
         emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
     }
 
@@ -167,6 +206,24 @@ class AuthRepository(
         }
     }.catch { e ->
         emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+    }
+
+    private fun parseError(rawError: String?): ErrorResponse {
+        if (rawError.isNullOrBlank()) return ErrorResponse()
+
+        return runCatching {
+            gson.fromJson(rawError, ErrorResponse::class.java)
+        }.getOrElse {
+            ErrorResponse(message = rawError.take(180))
+        }
+    }
+
+    private fun ErrorResponse.firstMessage(): String? {
+        return errors
+            ?.values
+            ?.firstOrNull()
+            ?.firstOrNull()
+            ?: message?.takeIf { it.isNotBlank() }
     }
 }
 

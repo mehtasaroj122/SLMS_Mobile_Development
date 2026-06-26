@@ -221,25 +221,29 @@ Auth: Not required
 
 Roles: public
 
-Purpose: Send or start password reset for an email address.
+Purpose: Send a password reset email for a real user account. The reset link opens the existing Laravel web reset password page.
 
-Request: `email` required.
+Request body:
+
+```json
+{"email":"user@example.com"}
+```
 
 Success Response:
 
 ```json
-{"message":"Password reset instructions sent successfully."}
+{"success":true,"message":"We have emailed your password reset link.","data":{}}
 ```
 
 Error Response:
 
 ```json
-{"message":"The given data was invalid.","errors":{"email":["The selected email is invalid."]}}
+{"success":false,"message":"We can't find a user with that email address.","errors":{"email":["We can't find a user with that email address."]}}
 ```
 
 Controller: `PasswordResetController@forgot`
 
-Notes: Throttled by `throttle:5,1`.
+Notes: Throttled by `throttle:5,1`. Uses the real `users` table and Laravel `password_reset_tokens` broker; no local fake reset is performed. Missing or invalid email returns JSON only.
 
 ### Reset Password
 

@@ -10,6 +10,16 @@ data class LoginRequest(
     val password: String
 )
 
+data class ForgotPasswordRequest(
+    val email: String
+)
+
+data class ForgotPasswordResponse(
+    val success: Boolean = false,
+    val message: String? = null,
+    val data: Map<String, Any>? = null
+)
+
 data class CompleteRegistrationRequest(
     val role: String,
     val email: String,

@@ -5,6 +5,8 @@ import com.saroj.lmsmobile.data.models.auth.LoginResponse
 import com.saroj.lmsmobile.data.models.auth.ProfileResponse
 import com.saroj.lmsmobile.data.models.auth.CompleteRegistrationRequest
 import com.saroj.lmsmobile.data.models.auth.CompleteRegistrationResponse
+import com.saroj.lmsmobile.data.models.auth.ForgotPasswordRequest
+import com.saroj.lmsmobile.data.models.auth.ForgotPasswordResponse
 import com.saroj.lmsmobile.data.models.book.Book
 import com.saroj.lmsmobile.data.models.book.BookRequestModel
 import com.saroj.lmsmobile.data.models.book.StudentBookRequestBody
@@ -74,6 +76,11 @@ interface ApiService {
     suspend fun completeRegistration(
         @Body request: CompleteRegistrationRequest
     ): Response<CompleteRegistrationResponse>
+
+    @POST("forgot-password")
+    suspend fun forgotPassword(
+        @Body request: ForgotPasswordRequest
+    ): Response<ForgotPasswordResponse>
 
     /**
      * Logout and invalidate current token.

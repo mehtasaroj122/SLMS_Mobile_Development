@@ -1,5 +1,6 @@
 package com.saroj.lmsmobile.ui.auth.viewmodel
 
+import android.util.Patterns
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -72,8 +73,7 @@ class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
      * @return true if valid, false otherwise
      */
     private fun isEmailValid(email: String): Boolean {
-        val emailPattern = "[a-zA-Z0-9._-]+@[a-z]+\\.+[a-z]+"
-        return email.isNotEmpty() && email.matches(emailPattern.toRegex())
+        return email.isNotBlank() && Patterns.EMAIL_ADDRESS.matcher(email).matches()
     }
 
     /**

@@ -42,6 +42,11 @@
             android:theme="@style/Theme.LMSMobile.Login"
             android:windowSoftInputMode="adjustResize" />
         <activity
+            android:name=".ui.auth.CompleteRegistrationActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LMSMobile.Login"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
             android:name=".ui.common.UnauthorizedActivity"
             android:exported="false" />
         <activity

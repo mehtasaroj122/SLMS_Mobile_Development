@@ -2,6 +2,7 @@ package com.saroj.lmsmobile.ui.auth
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.widget.EditText
@@ -11,6 +12,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.widget.doOnTextChanged
 import com.google.android.material.textfield.TextInputLayout
 import com.saroj.lmsmobile.MainApplication
@@ -58,6 +60,8 @@ class LoginActivity : AppCompatActivity() {
 
     private lateinit var emailInputLayout: TextInputLayout
     private lateinit var passwordInputLayout: TextInputLayout
+    private lateinit var emailFloatingLabel: TextView
+    private lateinit var passwordFloatingLabel: TextView
     private lateinit var emailEditText: EditText
     private lateinit var passwordEditText: EditText
     private lateinit var loginButton: View
@@ -93,6 +97,8 @@ class LoginActivity : AppCompatActivity() {
     private fun initializeViews() {
         emailInputLayout = findViewById(R.id.textInputLayoutEmail)
         passwordInputLayout = findViewById(R.id.textInputLayoutPassword)
+        emailFloatingLabel = findViewById(R.id.floatingLabelEmail)
+        passwordFloatingLabel = findViewById(R.id.floatingLabelPassword)
         emailEditText = findViewById(R.id.editTextEmail)
         passwordEditText = findViewById(R.id.editTextPassword)
         loginButton = findViewById(R.id.buttonLogin)
@@ -102,6 +108,7 @@ class LoginActivity : AppCompatActivity() {
 
         emailInputLayout.isHintEnabled = false
         passwordInputLayout.isHintEnabled = false
+        updateAllFloatingLabels(animate = false)
     }
 
     /**
@@ -122,12 +129,20 @@ class LoginActivity : AppCompatActivity() {
         // Clear errors when user focuses or edits a field
         emailEditText.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) viewModel.clearErrors()
+            updateFloatingLabel(emailEditText, emailFloatingLabel, "Email address")
         }
         passwordEditText.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) viewModel.clearErrors()
+            updateFloatingLabel(passwordEditText, passwordFloatingLabel, "Password")
         }
-        emailEditText.doOnTextChanged { _, _, _, _ -> viewModel.clearErrors() }
-        passwordEditText.doOnTextChanged { _, _, _, _ -> viewModel.clearErrors() }
+        emailEditText.doOnTextChanged { _, _, _, _ ->
+            viewModel.clearErrors()
+            updateFloatingLabel(emailEditText, emailFloatingLabel, "Email address")
+        }
+        passwordEditText.doOnTextChanged { _, _, _, _ ->
+            viewModel.clearErrors()
+            updateFloatingLabel(passwordEditText, passwordFloatingLabel, "Password")
+        }
 
         // Login button click
         loginButton.setOnClickListener {
@@ -139,7 +154,7 @@ class LoginActivity : AppCompatActivity() {
         }
 
         findViewById<TextView>(R.id.textViewSignUp).setOnClickListener {
-            Toast.makeText(this, "Sign up is not available yet", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, CompleteRegistrationActivity::class.java))
         }
     }
 
@@ -210,6 +225,55 @@ class LoginActivity : AppCompatActivity() {
         passwordInputLayout.isEnabled = !isLoading
     }
 
+    private fun updateAllFloatingLabels(animate: Boolean = true) {
+        updateFloatingLabel(emailEditText, emailFloatingLabel, "Email address", animate)
+        updateFloatingLabel(passwordEditText, passwordFloatingLabel, "Password", animate)
+    }
+
+    private fun updateFloatingLabel(
+        editText: EditText,
+        floatingLabel: TextView,
+        label: String,
+        animate: Boolean = true
+    ) {
+        val shouldFloat = editText.hasFocus() || editText.text?.isNotBlank() == true
+        val stateChanged = floatingLabel.isSelected != shouldFloat
+        floatingLabel.text = label
+        floatingLabel.visibility = View.VISIBLE
+        floatingLabel.isSelected = shouldFloat
+        editText.hint = null
+
+        val targetTranslationY = if (shouldFloat) LABEL_FLOAT_Y_DP.dp else LABEL_INSIDE_Y_DP.dp
+        val targetTranslationX = if (shouldFloat) LABEL_FLOAT_X_DP.dp else LABEL_INSIDE_X_DP.dp
+        val targetScale = if (shouldFloat) LABEL_FLOAT_SCALE else LABEL_INSIDE_SCALE
+        val targetColor = ContextCompat.getColor(
+            this,
+            if (shouldFloat) R.color.auth_secondary else R.color.auth_text_hint
+        )
+        val targetBackground = if (shouldFloat) R.color.auth_card else R.color.transparent
+
+        floatingLabel.setBackgroundColor(ContextCompat.getColor(this, targetBackground))
+        floatingLabel.setTextColor(targetColor)
+
+        if (!animate || !stateChanged) {
+            floatingLabel.animate().cancel()
+            floatingLabel.translationY = targetTranslationY
+            floatingLabel.translationX = targetTranslationX
+            floatingLabel.scaleX = targetScale
+            floatingLabel.scaleY = targetScale
+            return
+        }
+
+        floatingLabel.animate()
+            .translationY(targetTranslationY)
+            .translationX(targetTranslationX)
+            .scaleX(targetScale)
+            .scaleY(targetScale)
+            .setDuration(180L)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
+    }
+
     private fun playEntranceAnimation() {
         val brandHeader = findViewById<View>(R.id.authBrandHeader)
         val loginCard = findViewById<View>(R.id.loginCard)
@@ -278,5 +342,21 @@ class LoginActivity : AppCompatActivity() {
         startActivity(intent)
         finish()
     }
+
+    private companion object {
+        const val LABEL_INSIDE_Y_DP = 35f
+        const val LABEL_FLOAT_Y_DP = 2f
+        const val LABEL_INSIDE_X_DP = 18f
+        const val LABEL_FLOAT_X_DP = 0f
+        const val LABEL_INSIDE_SCALE = 1f
+        const val LABEL_FLOAT_SCALE = 0.9f
+    }
+
+    private val Float.dp: Float
+        get() = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            this,
+            resources.displayMetrics
+        )
 }
 

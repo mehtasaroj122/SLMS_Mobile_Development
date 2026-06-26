@@ -10,6 +10,27 @@ data class LoginRequest(
     val password: String
 )
 
+data class CompleteRegistrationRequest(
+    val role: String,
+    val email: String,
+    val identifier: String,
+    val phone: String,
+    val password: String,
+    @SerializedName("password_confirmation")
+    val passwordConfirmation: String
+)
+
+data class CompleteRegistrationResponse(
+    val success: Boolean,
+    val message: String,
+    val data: CompleteRegistrationData? = null
+)
+
+data class CompleteRegistrationData(
+    val role: String? = null,
+    val email: String? = null
+)
+
 /**
  * LoginResponse represents the server response after successful login.
  * Contains the access token and user information.

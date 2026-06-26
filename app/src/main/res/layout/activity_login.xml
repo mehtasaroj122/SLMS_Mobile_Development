@@ -62,93 +62,133 @@
             android:paddingEnd="22dp"
             android:paddingBottom="24dp">
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/textInputLayoutEmail"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            <FrameLayout
+                android:id="@+id/frameEmail"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:boxBackgroundMode="outline"
-                app:boxBackgroundColor="@color/auth_input_bg"
-                app:boxCornerRadiusBottomEnd="18dp"
-                app:boxCornerRadiusBottomStart="18dp"
-                app:boxCornerRadiusTopEnd="18dp"
-                app:boxCornerRadiusTopStart="18dp"
-                app:boxStrokeColor="@color/auth_input_stroke"
-                app:boxStrokeErrorColor="@color/error_color"
-                app:boxStrokeWidth="1dp"
-                app:boxStrokeWidthFocused="2dp"
-                app:errorEnabled="false"
-                app:errorTextColor="@color/error_color"
-                app:hintAnimationEnabled="false"
-                app:hintEnabled="false"
-                app:startIconDrawable="@drawable/ic_email"
-                app:startIconTint="@color/auth_icon">
+                android:layout_height="wrap_content">
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/editTextEmail"
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/textInputLayoutEmail"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="64dp"
-                    android:autofillHints="emailAddress"
+                    android:layout_marginTop="8dp"
+                    app:boxBackgroundMode="outline"
+                    app:boxBackgroundColor="@color/auth_input_bg"
+                    app:boxCornerRadiusBottomEnd="18dp"
+                    app:boxCornerRadiusBottomStart="18dp"
+                    app:boxCornerRadiusTopEnd="18dp"
+                    app:boxCornerRadiusTopStart="18dp"
+                    app:boxStrokeColor="@color/auth_input_stroke"
+                    app:boxStrokeErrorColor="@color/error_color"
+                    app:boxStrokeWidth="1dp"
+                    app:boxStrokeWidthFocused="2dp"
+                    app:errorEnabled="false"
+                    app:errorTextColor="@color/error_color"
+                    app:hintEnabled="false"
+                    app:startIconDrawable="@drawable/ic_email"
+                    app:startIconTint="@color/auth_icon">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/editTextEmail"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="64dp"
+                        android:autofillHints="emailAddress"
+                        android:fontFamily="sans-serif"
+                        android:gravity="center_vertical"
+                        android:includeFontPadding="false"
+                        android:inputType="textEmailAddress"
+                        android:paddingTop="10dp"
+                        android:paddingBottom="8dp"
+                        android:singleLine="true"
+                        android:textColor="@color/auth_text_primary"
+                        android:textColorHint="@color/auth_text_hint"
+                        android:textSize="16sp" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView
+                    android:id="@+id/floatingLabelEmail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="22dp"
+                    android:background="@color/auth_card"
                     android:fontFamily="sans-serif"
-                    android:gravity="center_vertical"
-                    android:hint="Email address"
                     android:includeFontPadding="false"
-                    android:inputType="textEmailAddress"
-                    android:paddingTop="10dp"
-                    android:paddingBottom="8dp"
-                    android:singleLine="true"
-                    android:textColor="@color/auth_text_primary"
-                    android:textColorHint="@color/auth_text_hint"
-                    android:textSize="16sp" />
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp"
+                    android:text="Email address"
+                    android:textColor="@color/auth_text_hint"
+                    android:textSize="15sp"
+                    android:visibility="visible" />
+            </FrameLayout>
 
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/textInputLayoutPassword"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            <FrameLayout
+                android:id="@+id/framePassword"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:boxBackgroundMode="outline"
-                app:boxBackgroundColor="@color/auth_input_bg"
-                app:boxCornerRadiusBottomEnd="18dp"
-                app:boxCornerRadiusBottomStart="18dp"
-                app:boxCornerRadiusTopEnd="18dp"
-                app:boxCornerRadiusTopStart="18dp"
-                app:boxStrokeColor="@color/auth_input_stroke"
-                app:boxStrokeErrorColor="@color/error_color"
-                app:boxStrokeWidth="1dp"
-                app:boxStrokeWidthFocused="2dp"
-                app:endIconContentDescription="Show password"
-                app:endIconMode="password_toggle"
-                app:endIconTint="@color/auth_icon"
-                app:errorEnabled="false"
-                app:errorTextColor="@color/error_color"
-                app:hintAnimationEnabled="false"
-                app:hintEnabled="false"
-                app:startIconDrawable="@drawable/ic_lock"
-                app:startIconTint="@color/auth_icon">
+                android:layout_marginTop="8dp">
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/editTextPassword"
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/textInputLayoutPassword"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="64dp"
-                    android:autofillHints="password"
-                    android:fontFamily="sans-serif"
-                    android:gravity="center_vertical"
-                    android:hint="Password"
-                    android:includeFontPadding="false"
-                    android:inputType="textPassword"
-                    android:paddingTop="10dp"
-                    android:paddingBottom="8dp"
-                    android:singleLine="true"
-                    android:textColor="@color/auth_text_primary"
-                    android:textColorHint="@color/auth_text_hint"
-                    android:textSize="16sp" />
+                    android:layout_marginTop="8dp"
+                    app:boxBackgroundMode="outline"
+                    app:boxBackgroundColor="@color/auth_input_bg"
+                    app:boxCornerRadiusBottomEnd="18dp"
+                    app:boxCornerRadiusBottomStart="18dp"
+                    app:boxCornerRadiusTopEnd="18dp"
+                    app:boxCornerRadiusTopStart="18dp"
+                    app:boxStrokeColor="@color/auth_input_stroke"
+                    app:boxStrokeErrorColor="@color/error_color"
+                    app:boxStrokeWidth="1dp"
+                    app:boxStrokeWidthFocused="2dp"
+                    app:endIconContentDescription="Show password"
+                    app:endIconMode="password_toggle"
+                    app:endIconTint="@color/auth_icon"
+                    app:errorEnabled="false"
+                    app:errorTextColor="@color/error_color"
+                    app:hintEnabled="false"
+                    app:startIconDrawable="@drawable/ic_lock"
+                    app:startIconTint="@color/auth_icon">
 
-            </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/editTextPassword"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="64dp"
+                        android:autofillHints="password"
+                        android:fontFamily="sans-serif"
+                        android:gravity="center_vertical"
+                        android:includeFontPadding="false"
+                        android:inputType="textPassword"
+                        android:paddingTop="10dp"
+                        android:paddingBottom="8dp"
+                        android:singleLine="true"
+                        android:textColor="@color/auth_text_primary"
+                        android:textColorHint="@color/auth_text_hint"
+                        android:textSize="16sp" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView
+                    android:id="@+id/floatingLabelPassword"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="22dp"
+                    android:background="@color/auth_card"
+                    android:fontFamily="sans-serif"
+                    android:includeFontPadding="false"
+                    android:paddingStart="6dp"
+                    android:paddingEnd="6dp"
+                    android:text="Password"
+                    android:textColor="@color/auth_text_hint"
+                    android:textSize="15sp"
+                    android:visibility="visible" />
+            </FrameLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"

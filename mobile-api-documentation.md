@@ -11,6 +11,7 @@ Authentication: Protected routes use Sanctum bearer tokens. Send `Authorization:
 | Method | Endpoint | Auth | Roles | Purpose |
 | --- | --- | --- | --- | --- |
 | POST | `/api/login` | No | public | Login and create a Sanctum token |
+| POST | `/api/auth/complete-registration` | No | student/staff | Complete invited Student or Staff account setup |
 | POST | `/api/forgot-password` | No | public | Request password reset |
 | POST | `/api/reset-password` | No | public | Reset password |
 | GET | `/api/test-unauthorized` | No | public | Return sample 401 JSON |
@@ -127,6 +128,58 @@ Profile/staff endpoints use:
 ```
 
 ## Authentication APIs
+
+### Complete Registration
+
+Method: POST
+
+Endpoint: `/api/auth/complete-registration`
+
+Auth: Not required
+
+Roles: student, staff
+
+Purpose: Allows invited/created Student or Staff records to complete account setup from mobile. This endpoint does not create public random accounts; the email, identifier, and phone must match an existing invited user and linked student/staff record.
+
+Request body:
+
+```json
+{"role":"student","email":"user@example.com","identifier":"STU-2023-001","phone":"9807044875","password":"Password123!","password_confirmation":"Password123!"}
+```
+
+Staff request body:
+
+```json
+{"role":"staff","email":"staff@example.com","identifier":"STAFF-001","phone":"9807044875","password":"Password123!","password_confirmation":"Password123!"}
+```
+
+Success Response:
+
+```json
+{"success":true,"message":"Registration completed successfully. You can now sign in.","data":{"role":"student","email":"user@example.com"}}
+```
+
+Validation Error Response:
+
+```json
+{"success":false,"message":"The given data was invalid.","errors":{"email":["We could not find an invited student account with that email address."]}}
+```
+
+Already Registered Response:
+
+```json
+{"success":false,"message":"The given data was invalid.","errors":{"email":["This account is already registered. Please sign in."]}}
+```
+
+Wrong Identifier Response:
+
+```json
+{"success":false,"message":"The given data was invalid.","errors":{"identifier":["We could not find an invited staff account with that staff ID."]}}
+```
+
+Controller: `AuthController@completeRegistration`
+
+Notes: Throttled by `throttle:registration`. Password must match the web Complete Registration rule: minimum 8 characters, letters, mixed case, numbers, symbols, and confirmation. Student `identifier` matches `students.student_id` or `students.roll_no`; staff `identifier` matches `staff.staff_id`. Phone values are normalized before matching, so `9807044875` and `+9779807044875` can match the same invited account. On success the API hashes the password, activates/verifies the user, sets `email_verified_at`, queues the existing welcome email, logs registration activity, and creates an `account.registration_completed` notification.
 
 ### Login
 
@@ -2660,6 +2713,7 @@ Mobile actions create notifications in the Laravel backend through the same `not
 
 | Endpoint | Action | Receiver | Notification type | Example title/message |
 | --- | --- | --- | --- | --- |
+| `POST /api/auth/complete-registration` | Student/staff completes invited mobile account setup | Registered user | `account.registration_completed` | `Registration Completed` / `Your account registration was completed successfully.` |
 | `POST /api/student/requests` | Student submits a book request | Staff and admin users | `student.book_request` | `New Book Request from Student` / `Student Name requested book 'Book Title'` |
 | `POST /api/book-requests/{id}/approve` | Staff/admin approves a request | Requesting student; admin audit alert | `request.approved`, `request.pending` | `Request Approved` / `Your request for 'Book Title' has been approved!` |
 | `POST /api/book-requests/{id}/reject` | Staff/admin rejects a request | Requesting student; admin audit alert | `request.rejected`, `request.pending` | `Request Rejected` / `Your request for 'Book Title' has been rejected.` |
@@ -2694,7 +2748,7 @@ Notification read APIs:
 
 ## Authentication Rules
 
-- Public routes: `/api/login`, `/api/forgot-password`, `/api/reset-password`, `/api/test-unauthorized`.
+- Public routes: `/api/login`, `/api/auth/complete-registration`, `/api/forgot-password`, `/api/reset-password`, `/api/test-unauthorized`.
 - All other routes require `auth:sanctum`.
 - Send bearer token as `Authorization: Bearer {access_token}`.
 - Missing or invalid token returns HTTP 401 JSON.

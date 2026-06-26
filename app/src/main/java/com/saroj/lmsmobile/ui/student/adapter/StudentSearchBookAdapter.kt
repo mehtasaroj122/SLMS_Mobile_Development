@@ -106,10 +106,7 @@ class StudentSearchBookAdapter(
             val value = rawCoverUrl?.trim()?.takeIf { it.isNotBlank() } ?: return null
             if (value.startsWith("http", ignoreCase = true)) {
                 return value
-                    .replace("http://127.0.0.1:8000", apiRootUrl())
-                    .replace("http://localhost:8000", apiRootUrl())
-                    .replace("https://127.0.0.1:8000", apiRootUrl())
-                    .replace("https://localhost:8000", apiRootUrl())
+                    .let { Constants.normalizeLaravelAssetUrl(it) ?: it }
             }
 
             val normalizedPath = value.trimStart('/')

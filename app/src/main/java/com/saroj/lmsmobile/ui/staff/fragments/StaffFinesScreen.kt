@@ -440,10 +440,7 @@ class StaffFinesScreen : Fragment() {
             return "$apiRoot/${if (path.startsWith("storage/")) path else "storage/$path"}"
         }
         return value
-            .replace("http://127.0.0.1:8000", apiRoot)
-            .replace("http://localhost:8000", apiRoot)
-            .replace("https://127.0.0.1:8000", apiRoot)
-            .replace("https://localhost:8000", apiRoot)
+            .let { Constants.normalizeLaravelAssetUrl(it) ?: it }
     }
 
     private fun baseCard(bottomMargin: Int): CardView =
@@ -1026,10 +1023,7 @@ class StaffFineDetailScreen : Fragment() {
             return "$apiRoot/${if (path.startsWith("storage/")) path else "storage/$path"}"
         }
         return value
-            .replace("http://127.0.0.1:8000", apiRoot)
-            .replace("http://localhost:8000", apiRoot)
-            .replace("https://127.0.0.1:8000", apiRoot)
-            .replace("https://localhost:8000", apiRoot)
+            .let { Constants.normalizeLaravelAssetUrl(it) ?: it }
     }
 
     private fun baseCard(bottomMargin: Int): CardView =

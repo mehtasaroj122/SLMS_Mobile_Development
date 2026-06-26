@@ -130,6 +130,15 @@ interface ApiService {
         @Query("per_page") pageSize: Int = 20
     ): Response<PaginatedResponse<Book>>
 
+    @GET("books")
+    suspend fun getBooksJson(
+        @Query("page") page: Int,
+        @Query("category") category: String? = null,
+        @Query("availability") availability: String? = null,
+        @Query("condition") condition: String? = null,
+        @Query("per_page") pageSize: Int = 20
+    ): Response<JsonElement>
+
     /**
      * Get book details by ID.
      * @param id Book ID
@@ -154,6 +163,16 @@ interface ApiService {
         @Query("sort") sort: String? = null,
         @Query("per_page") pageSize: Int = 20
     ): Response<PaginatedResponse<Book>>
+
+    @GET("books/search")
+    suspend fun searchBooksJson(
+        @Query("q") query: String,
+        @Query("page") page: Int,
+        @Query("category") category: String? = null,
+        @Query("availability") availability: String? = null,
+        @Query("condition") condition: String? = null,
+        @Query("per_page") pageSize: Int = 20
+    ): Response<JsonElement>
 
     /**
      * Submit an authenticated student request for a book.

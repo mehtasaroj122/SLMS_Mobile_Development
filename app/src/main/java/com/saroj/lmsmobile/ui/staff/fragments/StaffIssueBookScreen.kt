@@ -858,10 +858,7 @@ class StaffIssueBookScreen : Fragment() {
         }
         val apiRoot = apiRootUrl()
         return value
-            .replace("http://127.0.0.1:8000", apiRoot)
-            .replace("http://localhost:8000", apiRoot)
-            .replace("https://127.0.0.1:8000", apiRoot)
-            .replace("https://localhost:8000", apiRoot)
+            .let { Constants.normalizeLaravelAssetUrl(it) ?: it }
     }
 
     private fun loadBookCoverImage(image: ImageView, initial: TextView, rawUrl: String?) {
@@ -907,10 +904,7 @@ class StaffIssueBookScreen : Fragment() {
         }
         val apiRoot = apiRootUrl()
         return value
-            .replace("http://127.0.0.1:8000", apiRoot)
-            .replace("http://localhost:8000", apiRoot)
-            .replace("https://127.0.0.1:8000", apiRoot)
-            .replace("https://localhost:8000", apiRoot)
+            .let { Constants.normalizeLaravelAssetUrl(it) ?: it }
     }
 
     private fun normalizeStoragePath(rawPath: String): String {

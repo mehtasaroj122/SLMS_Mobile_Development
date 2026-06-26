@@ -1,5 +1,6 @@
 package com.saroj.lmsmobile.api
 
+import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.saroj.lmsmobile.api.interceptor.AuthInterceptor
@@ -32,6 +33,9 @@ import java.util.concurrent.TimeUnit
  *   Response → HttpLogging (logs response) → Retrofit → ViewModel
  */
 object RetrofitClient {
+
+    private const val TAG = "RetrofitClient"
+    private const val MAX_ERROR_LOG_BYTES = 8_192L
 
     private var retrofit: Retrofit? = null
     private var apiService: ApiService? = null
@@ -75,9 +79,24 @@ object RetrofitClient {
 
         // Add Auth Interceptor (adds Bearer token to all requests)
         builder.addInterceptor(AuthInterceptor(tokenManager))
+        builder.addInterceptor { chain ->
+            val request = chain.request()
+            val response = chain.proceed(request)
+            if (!response.isSuccessful) {
+                val errorBody = runCatching {
+                    response.peekBody(MAX_ERROR_LOG_BYTES).string()
+                }.getOrDefault("")
+                Log.e(
+                    TAG,
+                    "API request failed. url=${request.url}, status=${response.code}, errorBody=${errorBody.ifBlank { "<empty>" }}"
+                )
+            }
+            response
+        }
 
         // Add HttpLogging Interceptor (only in debug builds)
         val httpLoggingInterceptor = HttpLoggingInterceptor().apply {
+            redactHeader(Constants.AUTHORIZATION_HEADER)
             level = HttpLoggingInterceptor.Level.BODY
         }
         builder.addInterceptor(httpLoggingInterceptor)

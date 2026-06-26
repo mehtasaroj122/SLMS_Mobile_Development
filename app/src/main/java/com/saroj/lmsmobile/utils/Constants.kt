@@ -1,5 +1,7 @@
 package com.saroj.lmsmobile.utils
 
+import java.net.URI
+
 /**
  * Global constants for the SLMS Mobile App.
  * Includes API endpoints, request codes, timeout values, and app settings.
@@ -7,13 +9,45 @@ package com.saroj.lmsmobile.utils
 object Constants {
 
     // ==================== API Configuration ====================
-    // Base URL for API requests - Change based on emulator/device
+    // Use this URL when testing the app with Laravel running locally on Android Emulator.
+    // Laravel local command example: php artisan serve
+    // Local emulator URL:
+    // const val BASE_URL = "http://10.0.2.2:8000/api/"
 
-        // for emulator
-//    const val BASE_URL = "http://10.0.2.2:8000/api/"
+    // Use this URL when the Laravel project is hosted online.
+    // This is the production/live API URL.
+    const val BASE_URL = "https://lms.saroj00.com.np/api/"
 
-        // for real mobile
-    const val BASE_URL = "http://192.168.1.175:8000/api/"
+    val WEB_BASE_URL: String
+        get() = BASE_URL.removeSuffix("api/").trimEnd('/') + "/"
+
+    fun normalizeLaravelAssetUrl(rawUrl: String?): String? {
+        val value = rawUrl?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        if (value.startsWith("data:", ignoreCase = true)) return null
+
+        if (value.startsWith("http", ignoreCase = true)) {
+            val uri = runCatching { URI(value) }.getOrNull() ?: return value
+            return if (uri.port == LARAVEL_LOCAL_PORT) {
+                "${WEB_BASE_URL.trimEnd('/')}${uri.rawPath.orEmpty()}"
+            } else {
+                value
+            }
+        }
+
+        val normalizedPath = value
+            .trimStart('/')
+            .removePrefix("public/")
+            .removePrefix("storage/app/public/")
+            .removePrefix("app/public/")
+        val storagePath = if (normalizedPath.startsWith("storage/", ignoreCase = true)) {
+            normalizedPath
+        } else {
+            "storage/$normalizedPath"
+        }
+        return "${WEB_BASE_URL.trimEnd('/')}/$storagePath"
+    }
+
+    private const val LARAVEL_LOCAL_PORT = 8000
 
     // API Endpoints
     object Endpoints {

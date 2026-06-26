@@ -492,10 +492,7 @@ class StaffDashboardScreen : Fragment() {
 
         val apiRoot = Constants.BASE_URL.removeSuffix("api/").trimEnd('/')
         return value
-            .replace("http://127.0.0.1:8000", apiRoot)
-            .replace("http://localhost:8000", apiRoot)
-            .replace("https://127.0.0.1:8000", apiRoot)
-            .replace("https://localhost:8000", apiRoot)
+            .let { Constants.normalizeLaravelAssetUrl(it) ?: it }
     }
 
     private fun getInitials(name: String): String {
@@ -711,10 +708,7 @@ class StaffMoreScreen : Fragment() {
 
         val apiRoot = Constants.BASE_URL.removeSuffix("api/").trimEnd('/')
         return value
-            .replace("http://127.0.0.1:8000", apiRoot)
-            .replace("http://localhost:8000", apiRoot)
-            .replace("https://127.0.0.1:8000", apiRoot)
-            .replace("https://localhost:8000", apiRoot)
+            .let { Constants.normalizeLaravelAssetUrl(it) ?: it }
     }
 
     private fun getInitials(name: String): String {

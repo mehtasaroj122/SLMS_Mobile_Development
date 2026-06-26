@@ -6,6 +6,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!--
+        usesCleartextTraffic="true" may be needed when testing Laravel locally over HTTP
+        from the Android Emulator. The hosted live API uses HTTPS and does not need
+        cleartext traffic.
+    -->
     <application
         android:name=".MainApplication"
         android:allowBackup="true"

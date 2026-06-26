@@ -886,10 +886,7 @@ private fun Fragment.normalizeMediaUrl(rawUrl: String?): String? {
         return "$apiRoot/${if (path.startsWith("storage/")) path else "storage/$path"}"
     }
     return value
-        .replace("http://127.0.0.1:8000", apiRoot)
-        .replace("http://localhost:8000", apiRoot)
-        .replace("https://127.0.0.1:8000", apiRoot)
-        .replace("https://localhost:8000", apiRoot)
+        .let { Constants.normalizeLaravelAssetUrl(it) ?: it }
 }
 
 private fun formatCurrency(amount: Double): String = "Rs. ${String.format(Locale.US, "%.2f", amount)}"

@@ -11,6 +11,7 @@ import com.saroj.lmsmobile.data.models.staffstudents.StudentFineItem
 import com.saroj.lmsmobile.data.models.staffstudents.StudentFineSummary
 import com.saroj.lmsmobile.data.models.staffstudents.StudentIssuedBookItem
 import com.saroj.lmsmobile.data.repository.StaffStudentsRepository
+import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import kotlinx.coroutines.launch
 
 enum class StaffStudentDetailTab(val label: String) {
@@ -206,6 +207,7 @@ class StaffStudentDetailViewModel(
                         _isPayingFine.value = false
                         _successMessage.value = result.data.message ?: "Fine marked as paid successfully"
                         loadFines(force = true)
+                        NotificationRefreshBus.requestRefresh()
                     }
                     is NetworkResult.Error -> {
                         _isPayingFine.value = false
@@ -234,6 +236,7 @@ class StaffStudentDetailViewModel(
                         _isWaivingFine.value = false
                         _successMessage.value = result.data.message ?: "Fine waived successfully"
                         loadFines(force = true)
+                        NotificationRefreshBus.requestRefresh()
                     }
                     is NetworkResult.Error -> {
                         _isWaivingFine.value = false
@@ -257,6 +260,7 @@ class StaffStudentDetailViewModel(
                         _isApprovingRequest.value = false
                         _successMessage.value = result.data.message ?: "Request accepted successfully"
                         loadBookRequests(force = true)
+                        NotificationRefreshBus.requestRefresh()
                     }
                     is NetworkResult.Error -> {
                         _isApprovingRequest.value = false
@@ -280,6 +284,7 @@ class StaffStudentDetailViewModel(
                         _isRejectingRequest.value = false
                         _successMessage.value = result.data.message ?: "Request rejected successfully"
                         loadBookRequests(force = true)
+                        NotificationRefreshBus.requestRefresh()
                     }
                     is NetworkResult.Error -> {
                         _isRejectingRequest.value = false

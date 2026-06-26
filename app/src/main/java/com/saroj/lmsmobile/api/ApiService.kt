@@ -493,10 +493,16 @@ interface ApiService {
     // ==================== NOTIFICATIONS ====================
 
     @GET("notifications")
-    suspend fun getNotifications(): Response<JsonElement>
+    suspend fun getNotifications(
+        @Query("page") page: Int = 1,
+        @Query("per_page") pageSize: Int = 20
+    ): Response<JsonElement>
 
     @GET("notifications/unread")
-    suspend fun getUnreadNotifications(): Response<JsonElement>
+    suspend fun getUnreadNotifications(
+        @Query("page") page: Int = 1,
+        @Query("per_page") pageSize: Int = 20
+    ): Response<JsonElement>
 
     @GET("notifications/count")
     suspend fun getNotificationCount(): Response<JsonElement>

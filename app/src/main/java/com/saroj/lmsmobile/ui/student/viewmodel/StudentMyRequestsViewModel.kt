@@ -11,6 +11,7 @@ import com.saroj.lmsmobile.ui.student.model.MyRequestStatus
 import com.saroj.lmsmobile.ui.student.model.MyRequestUiModel
 import com.saroj.lmsmobile.ui.student.model.MyRequestsSummaryUiModel
 import com.saroj.lmsmobile.ui.student.model.MyRequestsTab
+import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -115,6 +116,7 @@ class StudentMyRequestsViewModel(
                         _cancelState.value = result
                         loadSummary()
                         loadRequests(forceRefresh = true)
+                        NotificationRefreshBus.requestRefresh()
                     }
                     is NetworkResult.Loading -> _cancelState.value = NetworkResult.Loading()
                     is NetworkResult.Error -> _cancelState.value = NetworkResult.Error(result.message, result.code)

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.models.notification.AppNotification
 import com.saroj.lmsmobile.data.repository.NotificationRepository
+import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -109,6 +110,7 @@ class NotificationsViewModel(
                     is NetworkResult.Success -> {
                         updateNotificationReadState(id)
                         _actionMessage.value = result.data.message ?: "Notification marked as read."
+                        NotificationRefreshBus.requestRefresh()
                     }
                     is NetworkResult.Error -> _actionMessage.value = "Unable to mark as read: ${result.message}"
                     is NetworkResult.Unauthorized -> _unauthorized.value = true
@@ -127,11 +129,12 @@ class NotificationsViewModel(
                     is NetworkResult.Success -> {
                         val now = currentTimestamp()
                         _notifications.value = _notifications.value.orEmpty().map {
-                            if (it.isUnread()) it.copy(readAt = now) else it
+                            if (it.isUnread()) it.copy(isRead = true, readAt = now) else it
                         }
                         _unreadCount.value = 0
                         filterByTab()
                         _actionMessage.value = result.data.message ?: "All notifications marked as read."
+                        NotificationRefreshBus.requestRefresh()
                     }
                     is NetworkResult.Error -> _actionMessage.value = "Unable to mark all as read: ${result.message}"
                     is NetworkResult.Unauthorized -> _unauthorized.value = true
@@ -152,6 +155,7 @@ class NotificationsViewModel(
                         publishUnreadCountFromCache()
                         filterByTab()
                         _actionMessage.value = result.data.message ?: "Notification deleted."
+                        NotificationRefreshBus.requestRefresh()
                     }
                     is NetworkResult.Error -> _actionMessage.value = "Unable to delete notification: ${result.message}"
                     is NetworkResult.Unauthorized -> _unauthorized.value = true
@@ -183,7 +187,7 @@ class NotificationsViewModel(
     private fun updateNotificationReadState(id: Int) {
         val wasUnread = _notifications.value.orEmpty().firstOrNull { it.id == id }?.isUnread() == true
         _notifications.value = _notifications.value.orEmpty().map {
-            if (it.id == id) it.copy(readAt = currentTimestamp()) else it
+            if (it.id == id) it.copy(isRead = true, readAt = currentTimestamp()) else it
         }
         if (wasUnread) {
             _unreadCount.value = ((_unreadCount.value ?: 0) - 1).coerceAtLeast(0)

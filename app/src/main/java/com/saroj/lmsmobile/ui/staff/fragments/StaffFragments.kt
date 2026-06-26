@@ -12,9 +12,11 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.saroj.lmsmobile.MainApplication
 import com.saroj.lmsmobile.R
@@ -34,7 +36,9 @@ import com.saroj.lmsmobile.ui.staff.model.StaffProfileUiModel
 import com.saroj.lmsmobile.ui.staff.viewmodel.StaffDashboardViewModel
 import com.saroj.lmsmobile.utils.Constants
 import com.saroj.lmsmobile.utils.LmsToast
+import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -60,6 +64,7 @@ class StaffDashboardScreen : Fragment() {
         setupSwipeRefresh(view)
         setupQuickActions(view)
         observeDashboard(view)
+        setupNotificationRefreshObserver()
         viewModel.loadDashboard()
         loadNotificationCount()
     }
@@ -267,6 +272,16 @@ class StaffDashboardScreen : Fragment() {
                     }
                     is NetworkResult.Unauthorized -> navigateToUnauthorized()
                     else -> Unit
+                }
+            }
+        }
+    }
+
+    private fun setupNotificationRefreshObserver() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                NotificationRefreshBus.events.collect {
+                    loadNotificationCount()
                 }
             }
         }
@@ -544,6 +559,7 @@ class StaffMoreScreen : Fragment() {
         bindCachedProfile(view)
         loadProfile(view)
         loadNotificationBadge(view)
+        setupNotificationRefreshObserver(view)
 
         val host = activity as? StaffDashboardActivity
         view.findViewById<View>(R.id.rowBookRequests)?.setOnClickListener {
@@ -629,6 +645,16 @@ class StaffMoreScreen : Fragment() {
                     }
                     is NetworkResult.Unauthorized -> navigateToUnauthorized()
                     else -> badge.visibility = View.GONE
+                }
+            }
+        }
+    }
+
+    private fun setupNotificationRefreshObserver(view: View) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                NotificationRefreshBus.events.collect {
+                    loadNotificationBadge(view)
                 }
             }
         }

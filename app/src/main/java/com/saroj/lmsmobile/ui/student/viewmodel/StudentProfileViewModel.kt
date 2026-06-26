@@ -8,6 +8,7 @@ import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.repository.StudentProfileRepository
 import com.saroj.lmsmobile.ui.student.model.DeleteEligibilityUiModel
 import com.saroj.lmsmobile.ui.student.model.StudentProfileUiModel
+import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -47,6 +48,7 @@ class StudentProfileViewModel(
                         currentProfile = result.data
                         _profileState.value = NetworkResult.Success(result.data)
                         _profileActionState.value = NetworkResult.Success("Profile updated successfully")
+                        NotificationRefreshBus.requestRefresh()
                     }
                     is NetworkResult.Error -> _profileActionState.value = NetworkResult.Error(result.message, result.code)
                     is NetworkResult.Unauthorized -> _profileActionState.value = NetworkResult.Unauthorized()
@@ -59,6 +61,9 @@ class StudentProfileViewModel(
         viewModelScope.launch {
             repository.changePassword(currentPassword, newPassword, confirmPassword).collect { result ->
                 _profileActionState.value = result
+                if (result is NetworkResult.Success) {
+                    NotificationRefreshBus.requestRefresh()
+                }
             }
         }
     }
@@ -72,6 +77,7 @@ class StudentProfileViewModel(
                         currentProfile = result.data
                         _profileState.value = NetworkResult.Success(result.data)
                         _profileActionState.value = NetworkResult.Success("Profile photo uploaded successfully")
+                        NotificationRefreshBus.requestRefresh()
                     }
                     is NetworkResult.Error -> _profileActionState.value = NetworkResult.Error(result.message, result.code)
                     is NetworkResult.Unauthorized -> _profileActionState.value = NetworkResult.Unauthorized()
@@ -90,6 +96,7 @@ class StudentProfileViewModel(
                         currentProfile = result.data
                         _profileState.value = NetworkResult.Success(result.data)
                         _profileActionState.value = NetworkResult.Success("Profile photo removed")
+                        NotificationRefreshBus.requestRefresh()
                     }
                     is NetworkResult.Error -> _profileActionState.value = NetworkResult.Error(result.message, result.code)
                     is NetworkResult.Unauthorized -> _profileActionState.value = NetworkResult.Unauthorized()

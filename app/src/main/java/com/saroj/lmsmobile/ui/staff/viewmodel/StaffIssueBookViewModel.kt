@@ -10,6 +10,7 @@ import com.saroj.lmsmobile.data.models.issue.IssueBooksResponse
 import com.saroj.lmsmobile.data.models.issue.IssuePrivilegesData
 import com.saroj.lmsmobile.data.models.issue.IssueStudent
 import com.saroj.lmsmobile.data.repository.StaffIssueBookRepository
+import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -378,6 +379,7 @@ class StaffIssueBookViewModel(
                         _selectedStudent.value = null
                         _issuePrivileges.value = null
                         bookSearchQuery = ""
+                        NotificationRefreshBus.requestRefresh()
                     }
                     is NetworkResult.Error -> {
                         _isIssuing.value = false

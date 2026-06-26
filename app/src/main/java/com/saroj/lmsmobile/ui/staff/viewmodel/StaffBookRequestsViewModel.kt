@@ -10,6 +10,7 @@ import com.saroj.lmsmobile.ui.staff.model.StaffBookRequestActionResult
 import com.saroj.lmsmobile.ui.staff.model.StaffBookRequestUiModel
 import com.saroj.lmsmobile.ui.staff.model.StaffBookRequestsSummaryUiModel
 import com.saroj.lmsmobile.ui.staff.model.StaffBookRequestsTab
+import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -190,6 +191,7 @@ class StaffBookRequestsViewModel(
                 _actionRequestId.value = null
                 _actionState.value = result
                 refresh()
+                NotificationRefreshBus.requestRefresh()
             }
             is NetworkResult.Error -> {
                 _actionRequestId.value = null

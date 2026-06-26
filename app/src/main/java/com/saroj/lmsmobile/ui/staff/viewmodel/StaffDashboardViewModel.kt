@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.models.staffdashboard.StaffDashboardData
 import com.saroj.lmsmobile.data.repository.StaffDashboardRepository
+import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import kotlinx.coroutines.launch
 
 class StaffDashboardViewModel(
@@ -90,6 +91,7 @@ class StaffDashboardViewModel(
             is NetworkResult.Success -> {
                 _actionMessage.value = result.data
                 fetchDashboard()
+                NotificationRefreshBus.requestRefresh()
             }
             is NetworkResult.Error -> {
                 _isLoading.value = false

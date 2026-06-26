@@ -26,9 +26,11 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -79,7 +81,9 @@ import com.saroj.lmsmobile.ui.student.viewmodel.StudentProfileViewModel
 import com.saroj.lmsmobile.ui.student.viewmodel.StudentSearchBooksViewModel
 import com.saroj.lmsmobile.utils.Constants
 import com.saroj.lmsmobile.utils.LmsToast
+import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -109,7 +113,15 @@ class StudentDashboardFragment : Fragment() {
         setupSwipeRefresh(view)
         setupQuickActions(view)
         setupAnimations(view)
+        setupNotificationRefreshObserver()
         viewModel.loadDashboard()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::notificationRepository.isInitialized) {
+            loadNotificationCount()
+        }
     }
 
     private fun setupViewModel() {
@@ -297,6 +309,16 @@ class StudentDashboardFragment : Fragment() {
                     }
                     is NetworkResult.Unauthorized -> navigateToUnauthorized()
                     else -> Unit
+                }
+            }
+        }
+    }
+
+    private fun setupNotificationRefreshObserver() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                NotificationRefreshBus.events.collect {
+                    loadNotificationCount()
                 }
             }
         }

@@ -10,6 +10,7 @@ import com.saroj.lmsmobile.data.repository.BookRepository
 import com.saroj.lmsmobile.ui.student.model.BookRequestState
 import com.saroj.lmsmobile.ui.student.model.StudentSearchBookUiModel
 import com.saroj.lmsmobile.utils.Constants
+import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -167,6 +168,8 @@ class StudentSearchBooksViewModel(
                         _requestResult.value = NetworkResult.Success(
                             result.data.message ?: "Request submitted successfully."
                         )
+                        refreshStudentRequestStates()
+                        NotificationRefreshBus.requestRefresh()
                     }
                     is NetworkResult.Error -> {
                         val likelyExistingRequest = result.code == Constants.HTTP_UNPROCESSABLE_ENTITY &&

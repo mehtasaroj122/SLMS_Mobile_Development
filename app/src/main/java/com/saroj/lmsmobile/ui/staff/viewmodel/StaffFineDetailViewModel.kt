@@ -9,6 +9,7 @@ import com.saroj.lmsmobile.data.models.fine.FineRecord
 import com.saroj.lmsmobile.data.models.fine.FineStudentInfo
 import com.saroj.lmsmobile.data.models.fine.StudentFineSummary
 import com.saroj.lmsmobile.data.repository.StaffFinesRepository
+import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import kotlinx.coroutines.launch
 
 class StaffFineDetailViewModel(
@@ -82,6 +83,7 @@ class StaffFineDetailViewModel(
                         _isPayingFine.value = false
                         _successMessage.value = result.data.message ?: "Fine marked as paid successfully."
                         refresh()
+                        NotificationRefreshBus.requestRefresh()
                     }
                     is NetworkResult.Error -> {
                         _isPayingFine.value = false
@@ -111,6 +113,7 @@ class StaffFineDetailViewModel(
                         _isWaivingFine.value = false
                         _successMessage.value = result.data.message ?: "Fine waived successfully."
                         refresh()
+                        NotificationRefreshBus.requestRefresh()
                     }
                     is NetworkResult.Error -> {
                         _isWaivingFine.value = false

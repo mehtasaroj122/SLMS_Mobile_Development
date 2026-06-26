@@ -62,6 +62,33 @@ class NotificationRepository(
         emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
     }
 
+    fun refreshUnreadCount(): Flow<NetworkResult<Int>> = flow {
+        emit(NetworkResult.Loading())
+        val countResponse = apiService.getNotificationCount()
+        if (countResponse.isSuccessful) {
+            val unreadCount = parseCount(countResponse.body()).unreadCount
+            if (unreadCount != null) {
+                emit(NetworkResult.Success(unreadCount))
+                return@flow
+            }
+        } else if (countResponse.code() == Constants.HTTP_UNAUTHORIZED) {
+            emit(handleError<Int>(countResponse))
+            return@flow
+        }
+
+        val notificationsResponse = apiService.getNotifications()
+        if (notificationsResponse.isSuccessful) {
+            val unreadCount = extractNotificationElements(notificationsResponse.body())
+                .mapIndexed { index, element -> parseNotification(element, fallbackId = index + 1) }
+                .count { it.isUnread() }
+            emit(NetworkResult.Success(unreadCount))
+        } else {
+            emit(handleError(notificationsResponse))
+        }
+    }.catch { e ->
+        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+    }
+
     fun markAsRead(id: Int): Flow<NetworkResult<BasicMessageResponse>> = flow {
         emit(NetworkResult.Loading())
         val response = apiService.markNotificationAsRead(id)
@@ -143,12 +170,17 @@ class NotificationRepository(
             title = title,
             message = message,
             type = type,
+            isRead = notification.booleanValueNullable("is_read", "isRead", "read")
+                ?: source.booleanValueNullable("is_read", "isRead", "read"),
             readAt = notification.stringValue("read_at", "readAt", "read_date")
                 ?: source.stringValue("read_at", "readAt", "read_date"),
             createdAt = notification.stringValue("created_at", "createdAt", "date", "timestamp")
                 ?: source.stringValue("created_at", "createdAt", "date", "timestamp"),
             updatedAt = notification.stringValue("updated_at", "updatedAt")
-                ?: source.stringValue("updated_at", "updatedAt")
+                ?: source.stringValue("updated_at", "updatedAt"),
+            timeAgo = notification.stringValue("time_ago", "timeAgo")
+                ?: source.stringValue("time_ago", "timeAgo"),
+            data = data
         )
     }
 
@@ -248,6 +280,21 @@ class NotificationRepository(
             get(key)?.takeIf { !it.isJsonNull && it.isJsonPrimitive }?.let { value ->
                 runCatching { value.asInt }.getOrNull()
                     ?: runCatching { value.asString.toInt() }.getOrNull()
+            }
+        }
+    }
+
+    private fun JsonObject.booleanValueNullable(vararg keys: String): Boolean? {
+        return keys.firstNotNullOfOrNull { key ->
+            get(key)?.takeIf { !it.isJsonNull && it.isJsonPrimitive }?.let { value ->
+                runCatching { value.asBoolean }.getOrNull()
+                    ?: runCatching {
+                        when (value.asString.trim().lowercase()) {
+                            "1", "true", "yes", "read" -> true
+                            "0", "false", "no", "unread" -> false
+                            else -> null
+                        }
+                    }.getOrNull()
             }
         }
     }

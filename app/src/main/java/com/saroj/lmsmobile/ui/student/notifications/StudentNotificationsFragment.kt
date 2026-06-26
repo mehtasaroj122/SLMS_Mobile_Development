@@ -14,8 +14,11 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -28,7 +31,10 @@ import com.saroj.lmsmobile.api.RetrofitClient
 import com.saroj.lmsmobile.data.models.notification.AppNotification
 import com.saroj.lmsmobile.data.repository.NotificationRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
+import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import com.saroj.lmsmobile.utils.LmsToast
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 class StudentNotificationsFragment : Fragment() {
@@ -66,6 +72,7 @@ class StudentNotificationsFragment : Fragment() {
         setupActions(view)
         setupTabs(view)
         observeNotifications()
+        setupNotificationRefreshObserver()
         viewModel.loadNotifications()
     }
 
@@ -225,6 +232,16 @@ class StudentNotificationsFragment : Fragment() {
 
         viewModel.unauthorized.observe(viewLifecycleOwner) { unauthorized ->
             if (unauthorized) navigateToUnauthorized()
+        }
+    }
+
+    private fun setupNotificationRefreshObserver() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                NotificationRefreshBus.events.collect {
+                    viewModel.refreshNotifications()
+                }
+            }
         }
     }
 

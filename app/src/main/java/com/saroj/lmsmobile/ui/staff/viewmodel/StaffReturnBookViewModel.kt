@@ -11,6 +11,7 @@ import com.saroj.lmsmobile.data.models.returnbook.ReturnPreviewData
 import com.saroj.lmsmobile.data.models.returnbook.ReturnRulesData
 import com.saroj.lmsmobile.data.models.returnbook.ReturnStudent
 import com.saroj.lmsmobile.data.repository.StaffReturnBookRepository
+import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -312,6 +313,7 @@ class StaffReturnBookViewModel(
                         _isProcessingReturn.value = false
                         _returnSuccess.value = result.data
                         clearSelectedStudent()
+                        NotificationRefreshBus.requestRefresh()
                     }
                     is NetworkResult.Error -> {
                         _isProcessingReturn.value = false

@@ -1974,7 +1974,7 @@ Roles: staff/admin
 
 Purpose: Paginated mobile staff student list.
 
-Request: optional `status` (`all`, `active`, `inactive`), `search` or `query`, `per_page`.
+Request: optional `query`, `per_page`.
 
 Success Response:
 
@@ -2653,6 +2653,44 @@ Error Response:
 Controller: `ActivityLogController@__invoke`
 
 Notes: Admin role only.
+
+## Mobile Notification Triggers
+
+Mobile actions create notifications in the Laravel backend through the same `notifications` table used by the web app. Android clients must not create arbitrary notifications directly.
+
+| Endpoint | Action | Receiver | Notification type | Example title/message |
+| --- | --- | --- | --- | --- |
+| `POST /api/student/requests` | Student submits a book request | Staff and admin users | `student.book_request` | `New Book Request from Student` / `Student Name requested book 'Book Title'` |
+| `POST /api/book-requests/{id}/approve` | Staff/admin approves a request | Requesting student; admin audit alert | `request.approved`, `request.pending` | `Request Approved` / `Your request for 'Book Title' has been approved!` |
+| `POST /api/book-requests/{id}/reject` | Staff/admin rejects a request | Requesting student; admin audit alert | `request.rejected`, `request.pending` | `Request Rejected` / `Your request for 'Book Title' has been rejected.` |
+| `POST /api/staff/book-requests/{bookRequest}/approve` | Staff/admin approves a request from staff mobile flow | Requesting student; admin audit alert | `request.approved`, `request.pending` | `Request Approved` / `Your request for 'Book Title' has been approved!` |
+| `POST /api/staff/book-requests/{bookRequest}/reject` | Staff/admin rejects a request from staff mobile flow | Requesting student; admin audit alert | `request.rejected`, `request.pending` | `Request Rejected` / `Your request for 'Book Title' has been rejected.` |
+| `POST /api/issues` | Staff/admin issues one or more books from shared issue API | Student | `book.issued` | `Book Issued Successfully` / `You have been issued 'Book Title' by Author.` |
+| `POST /api/staff/issues` | Staff/admin issues one or more books from staff API | Student | `book.issued` | `Book Issued Successfully` / `You have been issued 'Book Title' by Author.` |
+| `POST /api/issues/return/{id}` | Staff/admin returns one issued book from shared return API | Student | `book.returned` or `fine.created` | `Book Returned Successfully` or `Book Returned with Fine` |
+| `POST /api/staff/issues/{issue}/return` | Staff/admin returns one issued book from staff API | Student | `book.returned` or `fine.created` | `Book Returned Successfully` or `Book Returned with Fine` |
+| `POST /api/staff/returns` | Staff/admin returns multiple issued books from staff API | Student | `book.returned` or `fine.created` | `Book Returned Successfully` or `Book Returned with Fine` |
+| `POST /api/staff/fines/{fine}/pay` | Staff/admin marks a fine paid | Student | `payment.confirmed` | `Fine Payment Received` / `Your fine payment of Rs. 100 has been received and marked as paid.` |
+| `POST /api/staff/fines/{fine}/waive` | Staff/admin waives a fine | Student | `fine.reminder` | `Fine Waived` / `Your fine of Rs. 100 has been waived. Reason: ...` |
+| `PUT /api/profile` | Student, staff, or admin updates editable profile fields | Authenticated user | `account.profile_updated` | `Profile Information Updated` / `Your profile information was updated: ...` |
+| `POST /api/profile/photo` | Student, staff, or admin uploads profile photo | Authenticated user | `account.profile_updated` | `Profile Photo Updated` / `Your profile photo was updated successfully.` |
+| `DELETE /api/profile/photo` | Student, staff, or admin removes profile photo | Authenticated user | `account.profile_updated` | `Profile Photo Removed` / `Your profile photo was removed successfully.` |
+| `POST /api/profile/password` | Student, staff, or admin changes password | Authenticated user | `account.password_changed` | `Password Changed Successfully` / `Your password was changed successfully on ...` |
+| `POST /api/profile/change-password` | Alias for mobile password change | Authenticated user | `account.password_changed` | `Password Changed Successfully` / `Your password was changed successfully on ...` |
+| `DELETE /api/profile/account` | Student or staff deactivates own account where allowed | Authenticated user | `account.status_changed` | `Account Status Changed` / `Your account has been deactivated.` |
+| `DELETE /api/profile` | Student deactivates own account where allowed | Authenticated user | `account.status_changed` | `Account Status Changed` / `Your account has been deactivated.` |
+
+Student request cancellation (`POST /api/student/requests/{id}/cancel`) updates the request status and activity history, but it does not create a notification because the matching web student cancellation flow does not create one.
+
+Notification payloads use the existing notification columns: `user_id`, `type`, `title`, `message`, `data`, `related_model`, `related_id`, `read_at`, `created_at`, and `updated_at`.
+
+Notification read APIs:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/notifications` | Return paginated notifications for the authenticated user only. |
+| POST | `/api/notifications/{id}/read` | Mark one authenticated user's notification as read. |
+| POST | `/api/notifications/read-all` | Mark all unread notifications for the authenticated user as read. |
 
 ## Authentication Rules
 

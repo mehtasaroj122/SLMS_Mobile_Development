@@ -4,6 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.View
+import android.view.animation.DecelerateInterpolator
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.saroj.lmsmobile.MainApplication
@@ -49,6 +51,7 @@ class SplashActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
+        playSplashAnimation()
 
         // Initialize TokenManager from Application context
         tokenManager = (application as MainApplication).tokenManager
@@ -111,6 +114,7 @@ class SplashActivity : AppCompatActivity() {
         startActivity(Intent(this, LoginActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         })
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 
     /**
@@ -120,6 +124,7 @@ class SplashActivity : AppCompatActivity() {
         startActivity(Intent(this, AdminDashboardActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         })
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 
     /**
@@ -129,6 +134,7 @@ class SplashActivity : AppCompatActivity() {
         startActivity(Intent(this, StaffDashboardActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         })
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 
     /**
@@ -138,6 +144,42 @@ class SplashActivity : AppCompatActivity() {
         startActivity(Intent(this, StudentDashboardActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         })
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
+
+    private fun playSplashAnimation() {
+        val logoCard = findViewById<View>(R.id.splashLogoCard)
+        val title = findViewById<View>(R.id.textViewSplashTitle)
+        val subtitle = findViewById<View>(R.id.textViewSplashSubtitle)
+        val progress = findViewById<View>(R.id.progressBarSplash)
+        val interpolator = DecelerateInterpolator()
+
+        logoCard.alpha = 0f
+        logoCard.scaleX = 0.9f
+        logoCard.scaleY = 0.9f
+
+        listOf(title, subtitle, progress).forEach { view ->
+            view.alpha = 0f
+            view.translationY = 18f
+        }
+
+        logoCard.animate()
+            .alpha(1f)
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(520L)
+            .setInterpolator(interpolator)
+            .start()
+
+        listOf(title, subtitle, progress).forEachIndexed { index, view ->
+            view.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(180L + index * 90L)
+                .setDuration(420L)
+                .setInterpolator(interpolator)
+                .start()
+        }
     }
 }
 

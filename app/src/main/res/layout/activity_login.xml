@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/loginScrollView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_auth_gradient"
@@ -8,153 +10,151 @@
     android:overScrollMode="never">
 
     <LinearLayout
+        android:id="@+id/loginContent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_horizontal"
         android:orientation="vertical"
         android:paddingStart="24dp"
-        android:paddingTop="56dp"
+        android:paddingTop="48dp"
         android:paddingEnd="24dp"
         android:paddingBottom="32dp">
 
         <include
+            android:id="@+id/authBrandHeader"
             layout="@layout/component_auth_brand_header"
             android:layout_width="match_parent"
             android:layout_height="78dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginBottom="48dp" />
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:layout_marginBottom="42dp" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="28dp"
             android:fontFamily="sans-serif"
             android:includeFontPadding="false"
             android:text="Welcome back"
             android:textColor="@color/auth_text_primary"
-            android:textSize="36sp"
+            android:textSize="34sp"
             android:textStyle="bold" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="26dp"
+            android:fontFamily="sans-serif"
+            android:includeFontPadding="false"
+            android:text="Sign in to continue to your library portal"
+            android:textColor="@color/auth_text_secondary"
+            android:textSize="16sp" />
+
         <LinearLayout
+            android:id="@+id/loginCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@drawable/bg_auth_card"
             android:elevation="10dp"
             android:orientation="vertical"
-            android:paddingStart="24dp"
+            android:paddingStart="22dp"
             android:paddingTop="24dp"
-            android:paddingEnd="24dp"
+            android:paddingEnd="22dp"
             android:paddingBottom="24dp">
 
-            <LinearLayout
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/textInputLayoutEmail"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
-                android:layout_height="62dp"
-                android:layout_marginBottom="16dp"
-                android:background="@drawable/bg_auth_input"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="18dp">
+                android:layout_height="wrap_content"
+                app:boxBackgroundMode="outline"
+                app:boxBackgroundColor="@color/auth_input_bg"
+                app:boxCornerRadiusBottomEnd="18dp"
+                app:boxCornerRadiusBottomStart="18dp"
+                app:boxCornerRadiusTopEnd="18dp"
+                app:boxCornerRadiusTopStart="18dp"
+                app:boxStrokeColor="@color/auth_input_stroke"
+                app:boxStrokeErrorColor="@color/error_color"
+                app:boxStrokeWidth="1dp"
+                app:boxStrokeWidthFocused="2dp"
+                app:errorEnabled="false"
+                app:errorTextColor="@color/error_color"
+                app:hintAnimationEnabled="false"
+                app:hintEnabled="false"
+                app:startIconDrawable="@drawable/ic_email"
+                app:startIconTint="@color/auth_icon">
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_email" />
-
-                <EditText
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editTextEmail"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_marginStart="16dp"
-                    android:layout_weight="1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="64dp"
                     android:autofillHints="emailAddress"
-                    android:background="@android:color/transparent"
                     android:fontFamily="sans-serif"
+                    android:gravity="center_vertical"
                     android:hint="Email address"
                     android:includeFontPadding="false"
                     android:inputType="textEmailAddress"
-                    android:padding="0dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="8dp"
                     android:singleLine="true"
                     android:textColor="@color/auth_text_primary"
                     android:textColorHint="@color/auth_text_hint"
-                    android:textSize="17sp" />
+                    android:textSize="16sp" />
 
-            </LinearLayout>
+            </com.google.android.material.textfield.TextInputLayout>
 
-            <TextView
-                android:id="@+id/textViewEmailError"
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/textInputLayoutPassword"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="7dp"
-                android:layout_marginBottom="12dp"
-                android:fontFamily="sans-serif"
-                android:textColor="@color/error_color"
-                android:textSize="12sp"
-                android:visibility="gone" />
+                android:layout_marginTop="16dp"
+                app:boxBackgroundMode="outline"
+                app:boxBackgroundColor="@color/auth_input_bg"
+                app:boxCornerRadiusBottomEnd="18dp"
+                app:boxCornerRadiusBottomStart="18dp"
+                app:boxCornerRadiusTopEnd="18dp"
+                app:boxCornerRadiusTopStart="18dp"
+                app:boxStrokeColor="@color/auth_input_stroke"
+                app:boxStrokeErrorColor="@color/error_color"
+                app:boxStrokeWidth="1dp"
+                app:boxStrokeWidthFocused="2dp"
+                app:endIconContentDescription="Show password"
+                app:endIconMode="password_toggle"
+                app:endIconTint="@color/auth_icon"
+                app:errorEnabled="false"
+                app:errorTextColor="@color/error_color"
+                app:hintAnimationEnabled="false"
+                app:hintEnabled="false"
+                app:startIconDrawable="@drawable/ic_lock"
+                app:startIconTint="@color/auth_icon">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="62dp"
-                android:background="@drawable/bg_auth_input"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="18dp"
-                android:paddingEnd="10dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_lock" />
-
-                <EditText
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editTextPassword"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_marginStart="16dp"
-                    android:layout_weight="1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="64dp"
                     android:autofillHints="password"
-                    android:background="@android:color/transparent"
                     android:fontFamily="sans-serif"
+                    android:gravity="center_vertical"
                     android:hint="Password"
                     android:includeFontPadding="false"
                     android:inputType="textPassword"
-                    android:padding="0dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="8dp"
                     android:singleLine="true"
                     android:textColor="@color/auth_text_primary"
                     android:textColorHint="@color/auth_text_hint"
-                    android:textSize="17sp" />
+                    android:textSize="16sp" />
 
-                <ImageButton
-                    android:id="@+id/buttonTogglePassword"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Show password"
-                    android:padding="12dp"
-                    android:scaleType="center"
-                    android:src="@drawable/ic_eye" />
-
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/textViewPasswordError"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="7dp"
-                android:layout_marginBottom="12dp"
-                android:fontFamily="sans-serif"
-                android:textColor="@color/error_color"
-                android:textSize="12sp"
-                android:visibility="gone" />
+            </com.google.android.material.textfield.TextInputLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:layout_marginTop="12dp"
-                android:layout_marginBottom="24dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="22dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
@@ -176,7 +176,7 @@
                     android:fontFamily="sans-serif"
                     android:text="Remember me"
                     android:textColor="@color/auth_text_secondary"
-                    android:textSize="16sp" />
+                    android:textSize="15sp" />
 
                 <TextView
                     android:id="@+id/textViewForgotPassword"
@@ -189,7 +189,7 @@
                     android:gravity="center"
                     android:text="Forgot password?"
                     android:textColor="@color/auth_secondary"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textStyle="bold" />
 
             </LinearLayout>
@@ -198,7 +198,7 @@
                 layout="@layout/component_auth_button"
                 android:layout_width="match_parent"
                 android:layout_height="64dp"
-                android:layout_marginBottom="26dp" />
+                android:layout_marginBottom="24dp" />
 
             <include
                 layout="@layout/component_auth_security_badge"
@@ -210,7 +210,7 @@
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="48dp"
-            android:layout_marginTop="28dp"
+            android:layout_marginTop="26dp"
             android:gravity="center"
             android:orientation="horizontal">
 
@@ -220,7 +220,7 @@
                 android:fontFamily="sans-serif"
                 android:text="Need an account? "
                 android:textColor="@color/auth_text_secondary"
-                android:textSize="16sp" />
+                android:textSize="15sp" />
 
             <TextView
                 android:id="@+id/textViewSignUp"
@@ -233,7 +233,7 @@
                 android:gravity="center"
                 android:text="Sign up"
                 android:textColor="@color/auth_secondary"
-                android:textSize="16sp"
+                android:textSize="15sp"
                 android:textStyle="bold" />
 
         </LinearLayout>

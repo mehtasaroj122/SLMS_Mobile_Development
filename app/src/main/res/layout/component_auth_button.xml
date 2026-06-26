@@ -1,28 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/buttonLogin"
     android:layout_width="match_parent"
     android:layout_height="64dp"
-    android:elevation="8dp">
-
-    <Button
-        android:id="@+id/buttonLogin"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@drawable/bg_auth_button"
-        android:fontFamily="sans-serif"
-        android:gravity="center"
-        android:minHeight="0dp"
-        android:minWidth="0dp"
-        android:paddingStart="0dp"
-        android:paddingEnd="0dp"
-        android:stateListAnimator="@null"
-        android:text=""
-        android:textAllCaps="false"
-        android:textColor="@color/white"
-        android:textSize="18sp"
-        android:textStyle="bold" />
+    android:background="@drawable/bg_auth_button"
+    android:clickable="true"
+    android:contentDescription="Login"
+    android:elevation="8dp"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
+    android:minHeight="64dp">
 
     <LinearLayout
+        android:id="@+id/layoutLoginButtonContent"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_gravity="center"
@@ -32,7 +22,15 @@
         android:importantForAccessibility="no"
         android:orientation="horizontal">
 
+        <ProgressBar
+            android:id="@+id/progressBarLoading"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:indeterminateTint="@color/white"
+            android:visibility="gone" />
+
         <ImageView
+            android:id="@+id/imageViewLoginIcon"
             android:layout_width="22dp"
             android:layout_height="22dp"
             android:clickable="false"
@@ -41,6 +39,7 @@
             android:src="@drawable/ic_login_lock" />
 
         <TextView
+            android:id="@+id/textViewLoginButtonText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
@@ -54,13 +53,5 @@
             android:textStyle="bold" />
 
     </LinearLayout>
-
-    <ProgressBar
-        android:id="@+id/progressBarLoading"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
-        android:layout_gravity="center"
-        android:indeterminateTint="@color/white"
-        android:visibility="gone" />
 
 </FrameLayout>

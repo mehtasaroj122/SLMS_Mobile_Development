@@ -1,47 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/splashRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/primary_color"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:background="@drawable/bg_splash_gradient"
+    android:clipToPadding="false"
+    android:paddingStart="28dp"
+    android:paddingEnd="28dp">
 
-    <!-- App Logo or Icon -->
-    <ImageView
-        android:id="@+id/imageViewLogo"
-        android:layout_width="120dp"
-        android:layout_height="120dp"
-        android:layout_marginBottom="24dp"
-        android:contentDescription="@string/app_name"
-        android:scaleType="centerInside"
-        android:src="@mipmap/ic_launcher" />
-
-    <!-- App Name -->
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/splashContent"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:text="@string/app_name"
-        android:textColor="@color/white"
-        android:textSize="28sp"
-        android:textStyle="bold" />
+        android:layout_gravity="center"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
 
-    <!-- Subtitle -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Library Management System"
-        android:textColor="@color/white"
-        android:textSize="14sp"
-        android:alpha="0.7" />
+        <FrameLayout
+            android:id="@+id/splashLogoCard"
+            android:layout_width="156dp"
+            android:layout_height="156dp"
+            android:background="@drawable/bg_splash_logo_card"
+            android:elevation="14dp"
+            android:padding="14dp">
 
-    <!-- Progress Indicator -->
-    <ProgressBar
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginTop="48dp"
-        android:indeterminateTint="@color/white" />
+            <ImageView
+                android:id="@+id/imageViewLogo"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@string/app_name"
+                android:scaleType="fitCenter"
+                android:src="@drawable/lms_logo" />
 
-</LinearLayout>
+        </FrameLayout>
 
+        <TextView
+            android:id="@+id/textViewSplashTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:fontFamily="sans-serif"
+            android:includeFontPadding="false"
+            android:letterSpacing="0"
+            android:text="@string/app_name"
+            android:textColor="@color/white"
+            android:textSize="30sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/textViewSplashSubtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:alpha="0.88"
+            android:fontFamily="sans-serif"
+            android:includeFontPadding="false"
+            android:letterSpacing="0"
+            android:text="Library Management System"
+            android:textColor="@color/white"
+            android:textSize="15sp" />
+
+        <ProgressBar
+            android:id="@+id/progressBarSplash"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="128dp"
+            android:layout_height="4dp"
+            android:layout_marginTop="34dp"
+            android:indeterminate="true"
+            android:indeterminateTint="@color/white" />
+
+    </LinearLayout>
+
+</FrameLayout>

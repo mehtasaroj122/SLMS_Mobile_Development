@@ -2,15 +2,17 @@ package com.saroj.lmsmobile.ui.auth
 
 import android.content.Intent
 import android.os.Bundle
-import android.text.InputType
-import android.widget.Button
+import android.view.View
+import android.view.animation.DecelerateInterpolator
 import android.widget.EditText
-import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.doOnTextChanged
+import com.google.android.material.textfield.TextInputLayout
 import com.saroj.lmsmobile.MainApplication
 import com.saroj.lmsmobile.R
 import com.saroj.lmsmobile.api.RetrofitClient
@@ -54,16 +56,16 @@ import com.saroj.lmsmobile.utils.Constants
  */
 class LoginActivity : AppCompatActivity() {
 
+    private lateinit var emailInputLayout: TextInputLayout
+    private lateinit var passwordInputLayout: TextInputLayout
     private lateinit var emailEditText: EditText
     private lateinit var passwordEditText: EditText
-    private lateinit var togglePasswordButton: ImageButton
-    private lateinit var loginButton: Button
+    private lateinit var loginButton: View
     private lateinit var loadingProgressBar: ProgressBar
-    private lateinit var emailErrorTextView: TextView
-    private lateinit var passwordErrorTextView: TextView
+    private lateinit var loginButtonIcon: ImageView
+    private lateinit var loginButtonText: TextView
 
     private lateinit var viewModel: LoginViewModel
-    private var isPasswordVisible = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,19 +82,26 @@ class LoginActivity : AppCompatActivity() {
 
         // Set up observers
         observeViewModel()
+
+        // Polish first paint without delaying interaction
+        playEntranceAnimation()
     }
 
     /**
      * Initializes all UI components by finding their IDs.
      */
     private fun initializeViews() {
+        emailInputLayout = findViewById(R.id.textInputLayoutEmail)
+        passwordInputLayout = findViewById(R.id.textInputLayoutPassword)
         emailEditText = findViewById(R.id.editTextEmail)
         passwordEditText = findViewById(R.id.editTextPassword)
-        togglePasswordButton = findViewById(R.id.buttonTogglePassword)
         loginButton = findViewById(R.id.buttonLogin)
         loadingProgressBar = findViewById(R.id.progressBarLoading)
-        emailErrorTextView = findViewById(R.id.textViewEmailError)
-        passwordErrorTextView = findViewById(R.id.textViewPasswordError)
+        loginButtonIcon = findViewById(R.id.imageViewLoginIcon)
+        loginButtonText = findViewById(R.id.textViewLoginButtonText)
+
+        emailInputLayout.isHintEnabled = false
+        passwordInputLayout.isHintEnabled = false
     }
 
     /**
@@ -110,19 +119,15 @@ class LoginActivity : AppCompatActivity() {
      * Sets up click listeners for UI components.
      */
     private fun setupListeners() {
-        // Toggle password visibility
-        togglePasswordButton.setOnClickListener {
-            isPasswordVisible = !isPasswordVisible
-            viewModel.togglePasswordVisibility()
-        }
-
-        // Clear errors when user types
+        // Clear errors when user focuses or edits a field
         emailEditText.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) viewModel.clearErrors()
         }
         passwordEditText.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) viewModel.clearErrors()
         }
+        emailEditText.doOnTextChanged { _, _, _, _ -> viewModel.clearErrors() }
+        passwordEditText.doOnTextChanged { _, _, _, _ -> viewModel.clearErrors() }
 
         // Login button click
         loginButton.setOnClickListener {
@@ -178,38 +183,15 @@ class LoginActivity : AppCompatActivity() {
 
         // Observe email error
         viewModel.emailError.observe(this) { error ->
-            emailErrorTextView.text = error
-            emailErrorTextView.visibility = if (error != null) android.view.View.VISIBLE else android.view.View.GONE
+            emailInputLayout.isErrorEnabled = error != null
+            emailInputLayout.error = error
         }
 
         // Observe password error
         viewModel.passwordError.observe(this) { error ->
-            passwordErrorTextView.text = error
-            passwordErrorTextView.visibility = if (error != null) android.view.View.VISIBLE else android.view.View.GONE
+            passwordInputLayout.isErrorEnabled = error != null
+            passwordInputLayout.error = error
         }
-
-        // Observe password visibility
-        viewModel.showPassword.observe(this) { isVisible ->
-            updatePasswordFieldVisibility(isVisible)
-        }
-    }
-
-    /**
-     * Updates password field visibility.
-     * @param isVisible true to show password, false to hide
-     */
-    private fun updatePasswordFieldVisibility(isVisible: Boolean) {
-        val cursorPosition = passwordEditText.selectionStart
-        if (isVisible) {
-            passwordEditText.inputType = InputType.TYPE_CLASS_TEXT
-            togglePasswordButton.setImageResource(R.drawable.ic_eye_off)
-            togglePasswordButton.contentDescription = "Hide password"
-        } else {
-            passwordEditText.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            togglePasswordButton.setImageResource(R.drawable.ic_eye)
-            togglePasswordButton.contentDescription = "Show password"
-        }
-        passwordEditText.setSelection(cursorPosition)
     }
 
     /**
@@ -217,10 +199,40 @@ class LoginActivity : AppCompatActivity() {
      * @param isLoading true to show loading, false to hide
      */
     private fun showLoadingState(isLoading: Boolean) {
-        loadingProgressBar.visibility = if (isLoading) android.view.View.VISIBLE else android.view.View.GONE
+        loadingProgressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        loginButtonIcon.visibility = if (isLoading) View.GONE else View.VISIBLE
+        loginButtonText.text = if (isLoading) "Logging in..." else "Login"
+        loginButton.contentDescription = if (isLoading) "Logging in" else "Login"
         loginButton.isEnabled = !isLoading
         emailEditText.isEnabled = !isLoading
         passwordEditText.isEnabled = !isLoading
+        emailInputLayout.isEnabled = !isLoading
+        passwordInputLayout.isEnabled = !isLoading
+    }
+
+    private fun playEntranceAnimation() {
+        val brandHeader = findViewById<View>(R.id.authBrandHeader)
+        val loginCard = findViewById<View>(R.id.loginCard)
+
+        listOf(brandHeader, loginCard).forEach { view ->
+            view.alpha = 0f
+            view.translationY = 28f
+        }
+
+        brandHeader.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(420L)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
+
+        loginCard.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setStartDelay(110L)
+            .setDuration(460L)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
     }
 
     /**

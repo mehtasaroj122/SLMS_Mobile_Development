@@ -17,6 +17,11 @@
         <item name="android:windowLightStatusBar">true</item>
     </style>
 
+    <style name="TextAppearance.LMSMobile.AuthInputHint" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textColor">@color/auth_secondary</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
     <!-- Splash Theme -->
     <style name="Theme.LMSMobile.Splash" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:windowNoTitle">true</item>

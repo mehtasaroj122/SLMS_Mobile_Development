@@ -27,6 +27,8 @@ import com.saroj.lmsmobile.api.RetrofitClient
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.repository.StudentMyRequestsRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
+import com.saroj.lmsmobile.ui.components.OnlineRefreshable
+import com.saroj.lmsmobile.ui.components.runIfOnline
 import com.saroj.lmsmobile.ui.student.adapter.MyRequestsAdapter
 import com.saroj.lmsmobile.ui.student.model.MyRequestStatus
 import com.saroj.lmsmobile.ui.student.model.MyRequestUiModel
@@ -34,8 +36,9 @@ import com.saroj.lmsmobile.ui.student.model.MyRequestsSummaryUiModel
 import com.saroj.lmsmobile.ui.student.model.MyRequestsTab
 import com.saroj.lmsmobile.ui.student.viewmodel.StudentMyRequestsViewModel
 import com.saroj.lmsmobile.utils.LmsToast
+import com.saroj.lmsmobile.utils.NetworkMessages
 
-class StudentMyRequestsFragment : Fragment() {
+class StudentMyRequestsFragment : Fragment(), OnlineRefreshable {
 
     private lateinit var viewModel: StudentMyRequestsViewModel
     private lateinit var adapter: MyRequestsAdapter
@@ -143,7 +146,9 @@ class StudentMyRequestsFragment : Fragment() {
             R.color.my_requests_green
         )
         swipeRefreshLayout.setOnRefreshListener {
-            viewModel.refresh()
+            runIfOnline(onOffline = { swipeRefreshLayout.isRefreshing = false }) {
+                viewModel.refresh()
+            }
         }
     }
 
@@ -152,7 +157,9 @@ class StudentMyRequestsFragment : Fragment() {
             val content = nestedScrollView.getChildAt(0) ?: return@setOnScrollChangeListener
             val distanceToBottom = content.measuredHeight - nestedScrollView.measuredHeight - scrollY
             if (distanceToBottom <= LOAD_MORE_THRESHOLD_PX) {
-                viewModel.loadNextPage()
+                runIfOnline("You are offline. More data cannot be loaded right now.") {
+                    viewModel.loadNextPage()
+                }
             }
         }
     }
@@ -261,8 +268,14 @@ class StudentMyRequestsFragment : Fragment() {
         emptyTitle.text = "Unable to load requests"
         emptyMessage.text = message
         emptyActionButton.text = "Retry"
-        emptyActionButton.setOnClickListener { viewModel.refresh() }
+        emptyActionButton.setOnClickListener {
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.refresh() }
+        }
         emptyState.visibility = View.VISIBLE
+    }
+
+    override fun refreshAfterOnline() {
+        viewModel.refresh()
     }
 
     private fun updateSummaryCards(summary: MyRequestsSummaryUiModel) {
@@ -292,7 +305,7 @@ class StudentMyRequestsFragment : Fragment() {
             .setMessage("Do you want to cancel your request for '${request.bookTitle}'?")
             .setNegativeButton("No", null)
             .setPositiveButton("Cancel Request") { _, _ ->
-                viewModel.cancelRequest(request)
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.cancelRequest(request) }
             }
             .show()
     }

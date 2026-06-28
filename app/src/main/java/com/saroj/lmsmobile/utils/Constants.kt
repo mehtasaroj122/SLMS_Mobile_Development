@@ -131,7 +131,7 @@ object Constants {
     const val HTTP_SERVER_ERROR = 500
 
     // ==================== Error Messages ====================
-    const val ERROR_NO_INTERNET = "No internet connection. Please check your network."
+    const val ERROR_NO_INTERNET = "No internet connection. Showing saved data."
     const val ERROR_UNAUTHORIZED = "Your session has expired. Please login again."
     const val ERROR_FORBIDDEN = "You don't have permission to access this resource."
     const val ERROR_NOT_FOUND = "Resource not found."

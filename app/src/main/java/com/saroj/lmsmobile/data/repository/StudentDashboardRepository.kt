@@ -26,6 +26,7 @@ class StudentDashboardRepository(
         } else {
             emit(NetworkResult.Loading())
         }
+        if (stopIfOffline(cached)) return@flow
 
         val response = apiService.getStudentDashboard()
         if (response.isSuccessful) {
@@ -48,7 +49,7 @@ class StudentDashboardRepository(
         }
     }.catch { e ->
         Log.e("StudentDashboardRepo", "Failed to load student dashboard", e)
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     private fun parseErrorMessage(response: retrofit2.Response<*>): String {

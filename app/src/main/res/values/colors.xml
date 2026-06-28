@@ -30,6 +30,9 @@
     <color name="transparent">#00000000</color>
     <color name="divider">#EEEEEE</color>
     <color name="overlay">#80000000</color>
+    <color name="lms_toast_bg">#FFFFFF</color>
+    <color name="lms_toast_border">#D8E2EF</color>
+    <color name="lms_toast_text">#0F172A</color>
 
     <!-- Role-based Colors -->
     <color name="admin_color">#E91E63</color>

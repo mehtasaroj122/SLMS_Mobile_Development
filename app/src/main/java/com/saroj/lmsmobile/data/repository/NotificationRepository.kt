@@ -29,6 +29,7 @@ class NotificationRepository(
         val listType = object : TypeToken<List<AppNotification>>() {}.type
         val cached = LocalCacheProvider.cache?.read<List<AppNotification>>(cacheKey, listType)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getNotifications()
         if (response.isSuccessful) {
             val notifications = extractNotificationElements(response.body()).mapIndexed { index, element ->
@@ -40,7 +41,7 @@ class NotificationRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun getUnreadNotifications(): Flow<NetworkResult<List<AppNotification>>> = flow {
@@ -48,6 +49,7 @@ class NotificationRepository(
         val listType = object : TypeToken<List<AppNotification>>() {}.type
         val cached = LocalCacheProvider.cache?.read<List<AppNotification>>(cacheKey, listType)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getUnreadNotifications()
         if (response.isSuccessful) {
             val notifications = extractNotificationElements(response.body()).mapIndexed { index, element ->
@@ -59,13 +61,14 @@ class NotificationRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun getNotificationCount(): Flow<NetworkResult<NotificationCountResponse>> = flow {
         val cacheKey = "notifications:count"
         val cached = LocalCacheProvider.cache?.read(cacheKey, NotificationCountResponse::class.java)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getNotificationCount()
         if (response.isSuccessful) {
             val count = parseCount(response.body())
@@ -75,11 +78,12 @@ class NotificationRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun refreshUnreadCount(): Flow<NetworkResult<Int>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val countResponse = apiService.getNotificationCount()
         if (countResponse.isSuccessful) {
             val unreadCount = parseCount(countResponse.body()).unreadCount
@@ -102,11 +106,12 @@ class NotificationRepository(
             emit(handleError(notificationsResponse))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun markAsRead(id: Int): Flow<NetworkResult<BasicMessageResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.markNotificationAsRead(id)
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseMessage(response.body(), "Notification marked as read.")))
@@ -114,11 +119,12 @@ class NotificationRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun markAllAsRead(): Flow<NetworkResult<BasicMessageResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.markAllNotificationsAsRead()
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseMessage(response.body(), "All notifications marked as read.")))
@@ -126,11 +132,12 @@ class NotificationRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun deleteNotification(id: Int): Flow<NetworkResult<BasicMessageResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.deleteNotification(id)
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseMessage(response.body(), "Notification deleted.")))
@@ -138,7 +145,7 @@ class NotificationRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     private fun extractNotificationElements(root: JsonElement?): List<JsonElement> {

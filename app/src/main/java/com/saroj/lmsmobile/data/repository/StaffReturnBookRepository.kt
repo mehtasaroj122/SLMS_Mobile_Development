@@ -41,6 +41,7 @@ class StaffReturnBookRepository(
 
     fun getReturnSettings(): Flow<NetworkResult<ReturnSettingsResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.getReturnSettings()
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseSettings(response.body())))
@@ -51,11 +52,12 @@ class StaffReturnBookRepository(
         }
     }.catch { e ->
         Log.e(TAG, "Return settings failed", e)
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun searchStudents(query: String): Flow<NetworkResult<ReturnStudentSearchResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.searchReturnStudents(query)
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseStudentSearch(response.body())))
@@ -66,11 +68,12 @@ class StaffReturnBookRepository(
         }
     }.catch { e ->
         Log.e(TAG, "Return student search failed", e)
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun getStudentReturnData(student: ReturnStudent): Flow<NetworkResult<StudentReturnDataResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.getStudentReturnData(student.id)
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseStudentReturnData(response.body(), student)))
@@ -81,11 +84,12 @@ class StaffReturnBookRepository(
         }
     }.catch { e ->
         Log.e(TAG, "Student return data failed", e)
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun previewFine(issueIds: List<Int>, condition: String): Flow<NetworkResult<ReturnPreviewResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.previewReturnFine(ReturnPreviewRequest(issueIds, condition))
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parsePreview(response.body(), issueIds.size, condition)))
@@ -96,11 +100,12 @@ class StaffReturnBookRepository(
         }
     }.catch { e ->
         Log.e(TAG, "Return preview failed", e)
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun processReturn(issueIds: List<Int>, condition: String): Flow<NetworkResult<ProcessReturnResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val request = ProcessReturnRequest(issueIds = issueIds, condition = condition)
         val response = apiService.processReturns(request)
         if (response.isSuccessful) {
@@ -112,7 +117,7 @@ class StaffReturnBookRepository(
         }
     }.catch { e ->
         Log.e(TAG, "Process return failed", e)
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     private suspend fun getLibrarySettingsFallback(): NetworkResult<ReturnSettingsResponse> {

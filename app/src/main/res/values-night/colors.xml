@@ -20,6 +20,9 @@
     <color name="transparent">#00000000</color>
     <color name="divider">#334155</color>
     <color name="overlay">#B3000000</color>
+    <color name="lms_toast_bg">#1E293B</color>
+    <color name="lms_toast_border">#475569</color>
+    <color name="lms_toast_text">#F8FAFC</color>
     <color name="admin_color">#F472B6</color>
     <color name="staff_color">#FDBA74</color>
     <color name="student_color">#60A5FA</color>

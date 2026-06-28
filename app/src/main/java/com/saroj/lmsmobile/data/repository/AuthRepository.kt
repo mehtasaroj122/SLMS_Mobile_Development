@@ -9,8 +9,10 @@ import com.saroj.lmsmobile.data.models.auth.LoginResponse
 import com.saroj.lmsmobile.data.models.auth.ProfileResponse
 import com.saroj.lmsmobile.data.models.common.ErrorResponse
 import com.saroj.lmsmobile.data.models.common.NetworkResult
+import com.saroj.lmsmobile.network.NetworkMonitor
 import com.saroj.lmsmobile.storage.TokenManager
 import com.saroj.lmsmobile.utils.Constants
+import com.saroj.lmsmobile.utils.NetworkMessages
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
@@ -57,6 +59,10 @@ class AuthRepository(
      */
     fun login(email: String, password: String): Flow<NetworkResult<LoginResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (!NetworkMonitor.isCurrentlyOnline()) {
+            emit(NetworkResult.Error(NetworkMessages.OFFLINE_LOGIN))
+            return@flow
+        }
 
         try {
             val response = apiService.login(LoginRequest(email, password))
@@ -98,15 +104,16 @@ class AuthRepository(
             }
         } catch (e: Exception) {
             android.util.Log.e("AuthRepository", "Login exception: ${e.message}")
-            emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+            emit(NetworkResult.Error(e.toRepositoryMessage()))
         }
     }.catch { e ->
         android.util.Log.e("AuthRepository", "Login catch: ${e.message}")
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun forgotPassword(email: String): Flow<NetworkResult<ForgotPasswordResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
 
         val response = apiService.forgotPassword(ForgotPasswordRequest(email))
         if (response.isSuccessful) {
@@ -136,7 +143,7 @@ class AuthRepository(
         )
     }.catch { e ->
         android.util.Log.e("AuthRepository", "Forgot password error: ${e.message}")
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     /**
@@ -164,11 +171,11 @@ class AuthRepository(
         } catch (e: Exception) {
             // Clear local data even if network call fails
             tokenManager.clearAllData()
-            emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+            emit(NetworkResult.Error(e.toRepositoryMessage()))
         }
     }.catch { e ->
         tokenManager.clearAllData()
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     /**
@@ -178,6 +185,7 @@ class AuthRepository(
      */
     fun getProfile(): Flow<NetworkResult<ProfileResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
 
         try {
             val response = apiService.getProfile()
@@ -202,10 +210,10 @@ class AuthRepository(
                 }
             }
         } catch (e: Exception) {
-            emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+            emit(NetworkResult.Error(e.toRepositoryMessage()))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     private fun parseError(rawError: String?): ErrorResponse {

@@ -6,6 +6,8 @@ import com.saroj.lmsmobile.data.models.auth.CompleteRegistrationRequest
 import com.saroj.lmsmobile.data.models.auth.CompleteRegistrationResponse
 import com.saroj.lmsmobile.data.models.common.ErrorResponse
 import com.saroj.lmsmobile.utils.Constants
+import com.saroj.lmsmobile.network.NetworkMonitor
+import com.saroj.lmsmobile.utils.NetworkMessages
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
@@ -19,6 +21,10 @@ class CompleteRegistrationRepository(
         request: CompleteRegistrationRequest
     ): Flow<CompleteRegistrationResult> = flow {
         emit(CompleteRegistrationResult.Loading)
+        if (!NetworkMonitor.isCurrentlyOnline()) {
+            emit(CompleteRegistrationResult.Error(NetworkMessages.OFFLINE_RETRY))
+            return@flow
+        }
 
         val response = apiService.completeRegistration(request)
         if (response.isSuccessful) {
@@ -55,7 +61,7 @@ class CompleteRegistrationRepository(
             )
         }
     }.catch { exception ->
-        emit(CompleteRegistrationResult.Error(exception.message ?: Constants.ERROR_UNKNOWN))
+        emit(CompleteRegistrationResult.Error(NetworkMessages.forException(exception)))
     }
 
     private fun parseError(rawError: String?): ErrorResponse {

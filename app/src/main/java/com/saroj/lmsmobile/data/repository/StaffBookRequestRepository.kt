@@ -31,6 +31,7 @@ class StaffBookRequestRepository(
     fun getSummary(): Flow<NetworkResult<StaffBookRequestsSummaryUiModel>> = flow {
         val cached = LocalCacheProvider.cache?.read(CACHE_KEY_SUMMARY, StaffBookRequestsSummaryUiModel::class.java)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getStaffBookRequestSummary()
         if (response.isSuccessful) {
             val summary = parseSummary(response.body())
@@ -40,7 +41,7 @@ class StaffBookRequestRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun getRequests(
@@ -53,6 +54,7 @@ class StaffBookRequestRepository(
         val cacheKey = "staff:book-requests:status=$status:search=${normalizedSearch.orEmpty()}:page=$page:size=$pageSize"
         val cached = LocalCacheProvider.cache?.read(cacheKey, StaffBookRequestsPageUiModel::class.java)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getStaffBookRequests(
             status = status,
             search = normalizedSearch,
@@ -70,7 +72,7 @@ class StaffBookRequestRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     private fun parseRequestsPage(
@@ -93,6 +95,7 @@ class StaffBookRequestRepository(
 
     fun approveRequest(request: StaffBookRequestUiModel): Flow<NetworkResult<StaffBookRequestActionResult>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.approveStaffBookRequest(request.id)
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseActionResult(response.body(), request, StaffBookRequestStatus.APPROVED)))
@@ -100,11 +103,12 @@ class StaffBookRequestRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun rejectRequest(request: StaffBookRequestUiModel): Flow<NetworkResult<StaffBookRequestActionResult>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.rejectStaffBookRequest(request.id)
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseActionResult(response.body(), request, StaffBookRequestStatus.REJECTED)))
@@ -112,7 +116,7 @@ class StaffBookRequestRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     private fun parseSummary(root: JsonElement?): StaffBookRequestsSummaryUiModel {

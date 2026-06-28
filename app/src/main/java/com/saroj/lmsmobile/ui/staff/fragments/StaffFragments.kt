@@ -31,12 +31,15 @@ import com.saroj.lmsmobile.data.repository.NotificationRepository
 import com.saroj.lmsmobile.data.repository.StaffDashboardRepository
 import com.saroj.lmsmobile.data.repository.StaffProfileRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
+import com.saroj.lmsmobile.ui.components.OnlineRefreshable
+import com.saroj.lmsmobile.ui.components.runIfOnline
 import com.saroj.lmsmobile.ui.staff.StaffDashboardActivity
 import com.saroj.lmsmobile.ui.staff.model.StaffProfileUiModel
 import com.saroj.lmsmobile.ui.theme.DarkModeToggleBinder
 import com.saroj.lmsmobile.ui.staff.viewmodel.StaffDashboardViewModel
 import com.saroj.lmsmobile.utils.Constants
 import com.saroj.lmsmobile.utils.LmsToast
+import com.saroj.lmsmobile.utils.NetworkMessages
 import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
@@ -48,7 +51,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-class StaffDashboardScreen : Fragment() {
+class StaffDashboardScreen : Fragment(), OnlineRefreshable {
     private lateinit var viewModel: StaffDashboardViewModel
     private lateinit var notificationRepository: NotificationRepository
     private var hasDashboardData = false
@@ -101,10 +104,17 @@ class StaffDashboardScreen : Fragment() {
                 R.color.student_yellow
             )
             setOnRefreshListener {
-                refreshToastPending = true
-                viewModel.refreshDashboard()
+                runIfOnline(onOffline = { isRefreshing = false }) {
+                    refreshToastPending = true
+                    viewModel.refreshDashboard()
+                }
             }
         }
+    }
+
+    override fun refreshAfterOnline() {
+        viewModel.refreshDashboard()
+        loadNotificationCount()
     }
 
     private fun setupQuickActions(view: View) {
@@ -175,8 +185,10 @@ class StaffDashboardScreen : Fragment() {
         }
 
         view.findViewById<View>(R.id.buttonStaffDashboardRetry)?.setOnClickListener {
-            view.findViewById<View>(R.id.staffDashboardErrorCard)?.visibility = View.GONE
-            viewModel.refreshDashboard()
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) {
+                view.findViewById<View>(R.id.staffDashboardErrorCard)?.visibility = View.GONE
+                viewModel.refreshDashboard()
+            }
         }
     }
 
@@ -544,7 +556,7 @@ class StaffDashboardScreen : Fragment() {
     )
 }
 
-class StaffMoreScreen : Fragment() {
+class StaffMoreScreen : Fragment(), OnlineRefreshable {
     private var profilePhotoTag: String? = null
 
     override fun onCreateView(
@@ -580,6 +592,13 @@ class StaffMoreScreen : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        view?.let {
+            loadProfile(it)
+            loadNotificationBadge(it)
+        }
+    }
+
+    override fun refreshAfterOnline() {
         view?.let {
             loadProfile(it)
             loadNotificationBadge(it)

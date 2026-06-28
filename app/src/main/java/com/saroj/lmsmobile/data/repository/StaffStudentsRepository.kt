@@ -45,6 +45,7 @@ class StaffStudentsRepository(
         } else {
             emit(NetworkResult.Loading())
         }
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getStaffStudents(
             status = status,
             search = query,
@@ -63,7 +64,7 @@ class StaffStudentsRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun getStudentDetails(studentId: Int): Flow<NetworkResult<StaffStudentDetailResponse>> = flow {
@@ -74,6 +75,7 @@ class StaffStudentsRepository(
         } else {
             emit(NetworkResult.Loading())
         }
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getStaffIssueStudentDetail(studentId)
         if (response.isSuccessful) {
             val root = response.body()
@@ -90,7 +92,7 @@ class StaffStudentsRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun getIssuedBooks(studentId: Int): Flow<NetworkResult<StudentIssuedBooksResponse>> = flow {
@@ -101,6 +103,7 @@ class StaffStudentsRepository(
         } else {
             emit(NetworkResult.Loading())
         }
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getStaffStudentIssuedBooks(studentId)
         if (response.isSuccessful) {
             val books = extractArray(response.body()).mapIndexed { index, element ->
@@ -113,7 +116,7 @@ class StaffStudentsRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun getStudentFines(studentId: Int): Flow<NetworkResult<StudentFinesResponse>> = flow {
@@ -124,6 +127,7 @@ class StaffStudentsRepository(
         } else {
             emit(NetworkResult.Loading())
         }
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getStudentFineDetails(studentId)
         if (response.isSuccessful) {
             val body = response.body()
@@ -181,7 +185,7 @@ class StaffStudentsRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun getStudentBookRequests(studentId: Int): Flow<NetworkResult<StudentBookRequestsResponse>> = flow {
@@ -192,6 +196,7 @@ class StaffStudentsRepository(
         } else {
             emit(NetworkResult.Loading())
         }
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getStaffStudentBookRequests(studentId)
         if (response.isSuccessful) {
             val requests = extractArray(response.body()).mapIndexed { index, element ->
@@ -204,11 +209,12 @@ class StaffStudentsRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun markFinePaid(fineId: Int): Flow<NetworkResult<StaffStudentActionResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.markFinePaid(fineId)
         if (response.isSuccessful) {
             emit(NetworkResult.Success(StaffStudentActionResponse(message = response.body()?.message ?: "Fine marked as paid successfully")))
@@ -216,11 +222,12 @@ class StaffStudentsRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun waiveFine(fineId: Int, reason: String): Flow<NetworkResult<StaffStudentActionResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.waiveFine(fineId, WaiveFineRequest(reason.trim()))
         if (response.isSuccessful) {
             emit(NetworkResult.Success(StaffStudentActionResponse(message = response.body()?.message ?: "Fine waived successfully")))
@@ -228,11 +235,12 @@ class StaffStudentsRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun approveBookRequest(requestId: Int): Flow<NetworkResult<StaffStudentActionResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.approveStaffStudentBookRequest(requestId)
         if (response.isSuccessful) {
             emit(NetworkResult.Success(response.body() ?: StaffStudentActionResponse(message = "Request accepted successfully")))
@@ -240,11 +248,12 @@ class StaffStudentsRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun rejectBookRequest(requestId: Int): Flow<NetworkResult<StaffStudentActionResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.rejectStaffStudentBookRequest(requestId, RejectBookRequestBody())
         if (response.isSuccessful) {
             emit(NetworkResult.Success(response.body() ?: StaffStudentActionResponse(message = "Request rejected successfully")))
@@ -252,7 +261,7 @@ class StaffStudentsRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     private fun parseStudent(element: JsonElement?, fallbackId: Int): StaffStudentItem {

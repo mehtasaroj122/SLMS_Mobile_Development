@@ -31,6 +31,7 @@ class StudentMyFinesRepository(
     fun getSummary(): Flow<NetworkResult<MyFinesSummaryUiModel>> = flow {
         val cached = LocalCacheProvider.cache?.read(CACHE_KEY_SUMMARY, MyFinesSummaryUiModel::class.java)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getStudentFinesSummary()
         if (response.isSuccessful) {
             val summary = parseSummary(response.body())
@@ -40,7 +41,7 @@ class StudentMyFinesRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun getAllFines(): Flow<NetworkResult<List<MyFineUiModel>>> = loadFines(cacheName = "all", includeOverdue = true) {
@@ -57,6 +58,7 @@ class StudentMyFinesRepository(
 
     fun getFineDetail(id: Int): Flow<NetworkResult<MyFineUiModel>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.getAuthenticatedStudentFineDetail(id)
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseFine(extractFineElement(response.body()), id)))
@@ -64,7 +66,7 @@ class StudentMyFinesRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun buildSummaryFromFines(fines: List<MyFineUiModel>): MyFinesSummaryUiModel {
@@ -97,6 +99,7 @@ class StudentMyFinesRepository(
         val listType = object : TypeToken<List<MyFineUiModel>>() {}.type
         val cached = LocalCacheProvider.cache?.read<List<MyFineUiModel>>(cacheKey, listType)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = request()
         if (response.isSuccessful) {
             val fines = extractFineElements(response.body()).mapIndexed { index, element ->
@@ -126,7 +129,7 @@ class StudentMyFinesRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     private fun parseSummary(root: JsonElement?): MyFinesSummaryUiModel {

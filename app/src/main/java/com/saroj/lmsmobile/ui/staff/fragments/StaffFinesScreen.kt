@@ -39,11 +39,14 @@ import com.saroj.lmsmobile.data.models.fine.FineSummaryData
 import com.saroj.lmsmobile.data.models.fine.StudentFineSummary
 import com.saroj.lmsmobile.data.repository.StaffFinesRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
+import com.saroj.lmsmobile.ui.components.OnlineRefreshable
+import com.saroj.lmsmobile.ui.components.runIfOnline
 import com.saroj.lmsmobile.ui.staff.StaffDashboardActivity
 import com.saroj.lmsmobile.ui.staff.viewmodel.StaffFineDetailViewModel
 import com.saroj.lmsmobile.ui.staff.viewmodel.StaffFinesViewModel
 import com.saroj.lmsmobile.utils.Constants
 import com.saroj.lmsmobile.utils.LmsToast
+import com.saroj.lmsmobile.utils.NetworkMessages
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -51,7 +54,7 @@ import kotlin.concurrent.thread
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class StaffFinesScreen : Fragment() {
+class StaffFinesScreen : Fragment(), OnlineRefreshable {
     private lateinit var viewModel: StaffFinesViewModel
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var summaryContainer: LinearLayout
@@ -87,7 +90,7 @@ class StaffFinesScreen : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        if (initialLoadStarted) viewModel.refresh()
+        if (initialLoadStarted) runIfOnline { viewModel.refresh() }
     }
 
     private fun setupViewModel() {
@@ -125,7 +128,13 @@ class StaffFinesScreen : Fragment() {
             R.color.student_green,
             R.color.student_yellow
         )
-        swipeRefresh.setOnRefreshListener { viewModel.refresh() }
+        swipeRefresh.setOnRefreshListener {
+            runIfOnline(onOffline = { swipeRefresh.isRefreshing = false }) { viewModel.refresh() }
+        }
+    }
+
+    override fun refreshAfterOnline() {
+        viewModel.refresh()
     }
 
     private fun setupSearch() {
@@ -206,7 +215,9 @@ class StaffFinesScreen : Fragment() {
         if (message.isNullOrBlank()) return
         summaryContainer.removeAllViews()
         val card = defaultStateCard("Unable to load fine summary", message.take(140), R.drawable.ic_warning)
-        card.setOnClickListener { viewModel.loadFineSummary() }
+        card.setOnClickListener {
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.loadFineSummary() }
+        }
         summaryContainer.addView(card)
     }
 
@@ -250,7 +261,9 @@ class StaffFinesScreen : Fragment() {
     private fun renderStudentError(message: String) {
         studentsContainer.removeAllViews()
         val card = defaultStateCard("Unable to load fine records", message.take(140), R.drawable.ic_warning)
-        card.setOnClickListener { viewModel.loadFineStudents() }
+        card.setOnClickListener {
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.loadFineStudents() }
+        }
         studentsContainer.addView(card)
     }
 
@@ -545,7 +558,7 @@ class StaffFinesScreen : Fragment() {
     }
 }
 
-class StaffFineDetailScreen : Fragment() {
+class StaffFineDetailScreen : Fragment(), OnlineRefreshable {
     private lateinit var viewModel: StaffFineDetailViewModel
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var scrollView: NestedScrollView
@@ -578,10 +591,16 @@ class StaffFineDetailScreen : Fragment() {
         loadMoreProgress = view.findViewById(R.id.progressFineRecordsLoadMore)
         view.findViewById<View>(R.id.buttonFineDetailBack).setOnClickListener { requireActivity().onBackPressedDispatcher.onBackPressed() }
         swipeRefresh.setColorSchemeResources(R.color.student_primary, R.color.student_purple, R.color.student_green, R.color.student_yellow)
-        swipeRefresh.setOnRefreshListener { viewModel.refresh() }
+        swipeRefresh.setOnRefreshListener {
+            runIfOnline(onOffline = { swipeRefresh.isRefreshing = false }) { viewModel.refresh() }
+        }
         setupLoadMore()
         setupObservers()
         viewModel.loadStudentFineDetails(studentId)
+    }
+
+    override fun refreshAfterOnline() {
+        viewModel.refresh()
     }
 
     private fun setupViewModel() {
@@ -754,7 +773,9 @@ class StaffFineDetailScreen : Fragment() {
             .setTitle("Mark Fine as Paid?")
             .setMessage("Record $studentName's payment now?\n\n${formatCurrency(fine.amount)} for \"${fine.bookTitle.orDash()}\" will be marked as paid.")
             .setNegativeButton("Cancel", null)
-            .setPositiveButton("Mark as Paid") { _, _ -> viewModel.markFinePaid(fine.resolvedId) }
+            .setPositiveButton("Mark as Paid") { _, _ ->
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.markFinePaid(fine.resolvedId) }
+            }
             .show()
     }
 
@@ -802,7 +823,7 @@ class StaffFineDetailScreen : Fragment() {
                 waive.alpha = 0.55f
                 waive.text = "Waiving..."
                 dialog.dismiss()
-                viewModel.waiveFine(fine.resolvedId, reason)
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.waiveFine(fine.resolvedId, reason) }
             }
         }
         dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
@@ -814,7 +835,9 @@ class StaffFineDetailScreen : Fragment() {
         summaryContainer.removeAllViews()
         recordsContainer.removeAllViews()
         val card = defaultStateCard("Unable to load fine details", message.take(140), R.drawable.ic_warning)
-        card.setOnClickListener { viewModel.refresh() }
+        card.setOnClickListener {
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.refresh() }
+        }
         studentContainer.addView(card)
     }
 

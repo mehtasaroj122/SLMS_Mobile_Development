@@ -28,6 +28,7 @@ class StaffDashboardRepository(
         } else {
             emit(NetworkResult.Loading())
         }
+        if (stopIfOffline(cached)) return@flow
 
         val response = apiService.getStaffDashboard()
         if (response.isSuccessful) {
@@ -43,11 +44,12 @@ class StaffDashboardRepository(
         }
     }.catch { e ->
         Log.e("StaffDashboardRepo", "Failed to load staff dashboard", e)
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun approveRequest(requestId: Int): Flow<NetworkResult<String>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.approveBookRequest(requestId)
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseSuccessMessage(response, "Book request approved successfully.")))
@@ -56,11 +58,12 @@ class StaffDashboardRepository(
         }
     }.catch { e ->
         Log.e("StaffDashboardRepo", "Failed to approve book request", e)
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun rejectRequest(requestId: Int, remarks: String? = null): Flow<NetworkResult<String>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.rejectBookRequest(requestId, RejectBookRequestBody(remarks))
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseSuccessMessage(response, "Book request rejected successfully.")))
@@ -69,7 +72,7 @@ class StaffDashboardRepository(
         }
     }.catch { e ->
         Log.e("StaffDashboardRepo", "Failed to reject book request", e)
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     private suspend fun <R> handleErrorResponse(response: Response<*>): NetworkResult<R> {

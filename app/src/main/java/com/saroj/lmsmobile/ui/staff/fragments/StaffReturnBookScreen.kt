@@ -40,15 +40,18 @@ import com.saroj.lmsmobile.data.models.returnbook.ReturnRulesData
 import com.saroj.lmsmobile.data.models.returnbook.ReturnStudent
 import com.saroj.lmsmobile.data.repository.StaffReturnBookRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
+import com.saroj.lmsmobile.ui.components.OnlineRefreshable
+import com.saroj.lmsmobile.ui.components.runIfOnline
 import com.saroj.lmsmobile.ui.staff.StaffDashboardActivity
 import com.saroj.lmsmobile.ui.staff.viewmodel.StaffReturnBookViewModel
 import com.saroj.lmsmobile.utils.Constants
 import com.saroj.lmsmobile.utils.LmsToast
+import com.saroj.lmsmobile.utils.NetworkMessages
 import java.net.URL
 import java.util.Locale
 import kotlin.concurrent.thread
 
-class StaffReturnBookScreen : Fragment() {
+class StaffReturnBookScreen : Fragment(), OnlineRefreshable {
     private lateinit var viewModel: StaffReturnBookViewModel
     private lateinit var studentInput: EditText
     private lateinit var studentClearButton: ImageView
@@ -120,7 +123,15 @@ class StaffReturnBookScreen : Fragment() {
             R.color.student_green,
             R.color.student_yellow
         )
-        swipeRefresh.setOnRefreshListener { viewModel.refreshStudentReturnData() }
+        swipeRefresh.setOnRefreshListener {
+            runIfOnline(onOffline = { swipeRefresh.isRefreshing = false }) {
+                viewModel.refreshStudentReturnData()
+            }
+        }
+    }
+
+    override fun refreshAfterOnline() {
+        viewModel.refreshStudentReturnData()
     }
 
     private fun setupInput() {
@@ -233,7 +244,9 @@ class StaffReturnBookScreen : Fragment() {
         val error = viewModel.settingsError.value
         if (!error.isNullOrBlank() && viewModel.returnRules.value == null) {
             val card = defaultStateCard("Unable to load return rules", error.take(140), R.drawable.ic_warning)
-            card.setOnClickListener { viewModel.loadReturnSettings() }
+            card.setOnClickListener {
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.loadReturnSettings() }
+            }
             rulesContainer.addView(card)
             return
         }
@@ -305,7 +318,9 @@ class StaffReturnBookScreen : Fragment() {
         val error = viewModel.studentReturnDataError.value
         if (!error.isNullOrBlank()) {
             val card = defaultStateCard("Unable to load student return data", error.take(140), R.drawable.ic_warning)
-            card.setOnClickListener { viewModel.refreshStudentReturnData() }
+            card.setOnClickListener {
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.refreshStudentReturnData() }
+            }
             studentInfoContainer.addView(card)
             return
         }
@@ -459,7 +474,9 @@ class StaffReturnBookScreen : Fragment() {
             .setTitle("Confirm Return")
             .setMessage("Return $count book(s) from ${student.name}?\n\nCondition: $condition\nTotal Fine: $total\nSelected books: $count")
             .setNegativeButton("Cancel", null)
-            .setPositiveButton("Confirm Return") { _, _ -> viewModel.processReturn() }
+            .setPositiveButton("Confirm Return") { _, _ ->
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.processReturn() }
+            }
             .show()
     }
 
@@ -550,7 +567,9 @@ class StaffReturnBookScreen : Fragment() {
         val value = text(valueText, 12, R.color.student_text_muted)
         value.gravity = Gravity.CENTER
         card.addView(value)
-        card.setOnClickListener { viewModel.selectCondition(key) }
+        card.setOnClickListener {
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.selectCondition(key) }
+        }
         return card
     }
 

@@ -31,16 +31,19 @@ import com.saroj.lmsmobile.api.RetrofitClient
 import com.saroj.lmsmobile.data.models.notification.AppNotification
 import com.saroj.lmsmobile.data.repository.NotificationRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
+import com.saroj.lmsmobile.ui.components.OnlineRefreshable
+import com.saroj.lmsmobile.ui.components.runIfOnline
 import com.saroj.lmsmobile.ui.student.notifications.NotificationTab
 import com.saroj.lmsmobile.ui.student.notifications.NotificationsAdapter
 import com.saroj.lmsmobile.ui.student.notifications.NotificationsViewModel
 import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import com.saroj.lmsmobile.utils.LmsToast
+import com.saroj.lmsmobile.utils.NetworkMessages
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-class StaffNotificationsScreen : Fragment() {
+class StaffNotificationsScreen : Fragment(), OnlineRefreshable {
 
     private lateinit var viewModel: NotificationsViewModel
     private lateinit var adapter: NotificationsAdapter
@@ -159,13 +162,15 @@ class StaffNotificationsScreen : Fragment() {
             R.color.notifications_orange
         )
         swipeRefreshLayout.setOnRefreshListener {
-            viewModel.refreshNotifications()
+            runIfOnline(onOffline = { swipeRefreshLayout.isRefreshing = false }) {
+                viewModel.refreshNotifications()
+            }
         }
     }
 
     private fun setupActions(view: View) {
         view.findViewById<View>(R.id.buttonNotificationsRefresh)?.setOnClickListener {
-            viewModel.refreshNotifications()
+            runIfOnline { viewModel.refreshNotifications() }
         }
         markAllReadButton.setOnClickListener {
             val unread = viewModel.unreadCount.value ?: 0
@@ -174,12 +179,18 @@ class StaffNotificationsScreen : Fragment() {
                 .setTitle("Mark all notifications as read?")
                 .setMessage("This will remove unread indicators from all notifications.")
                 .setNegativeButton("Cancel", null)
-                .setPositiveButton("Mark all") { _, _ -> viewModel.markAllAsRead() }
+                .setPositiveButton("Mark all") { _, _ ->
+                    runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.markAllAsRead() }
+                }
                 .show()
         }
         stateAction.setOnClickListener {
-            viewModel.refreshNotifications()
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.refreshNotifications() }
         }
+    }
+
+    override fun refreshAfterOnline() {
+        viewModel.refreshNotifications()
     }
 
     private fun setupTabs(view: View) {
@@ -381,7 +392,7 @@ class StaffNotificationsScreen : Fragment() {
             .setMessage("This notification will be removed from your list.")
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Delete") { _, _ ->
-                viewModel.deleteNotification(notification)
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.deleteNotification(notification) }
             }
             .show()
     }

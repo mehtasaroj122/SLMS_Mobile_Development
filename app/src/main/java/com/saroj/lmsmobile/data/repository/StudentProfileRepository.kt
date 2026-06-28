@@ -35,6 +35,7 @@ class StudentProfileRepository(
     fun getProfile(): Flow<NetworkResult<StudentProfileUiModel>> = flow {
         val cached = LocalCacheProvider.cache?.read(CACHE_KEY_PROFILE, StudentProfileUiModel::class.java)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getProfileJson()
         if (response.isSuccessful) {
             val profile = parseProfile(response.body())
@@ -44,11 +45,12 @@ class StudentProfileRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun updateProfile(profile: StudentProfileUiModel): Flow<NetworkResult<StudentProfileUiModel>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.updateProfile(
             ProfileUpdateRequest(
                 name = profile.name,
@@ -74,7 +76,7 @@ class StudentProfileRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun changePassword(
@@ -83,6 +85,7 @@ class StudentProfileRepository(
         confirmPassword: String
     ): Flow<NetworkResult<String>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.changePassword(
             ChangePasswordRequest(
                 current_password = currentPassword,
@@ -97,11 +100,12 @@ class StudentProfileRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun getDeleteEligibility(): Flow<NetworkResult<DeleteEligibilityUiModel>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.getProfileDeleteEligibility()
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseDeleteEligibility(response.body())))
@@ -109,7 +113,7 @@ class StudentProfileRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun uploadPhoto(
@@ -117,6 +121,7 @@ class StudentProfileRepository(
         fallback: StudentProfileUiModel?
     ): Flow<NetworkResult<StudentProfileUiModel>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val requestBody = file.asRequestBody(resolveMediaType(file.name).toMediaTypeOrNull())
         val part = MultipartBody.Part.createFormData("photo", file.name, requestBody)
         val response = apiService.uploadProfilePhoto(part)
@@ -129,11 +134,12 @@ class StudentProfileRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun removePhoto(currentProfile: StudentProfileUiModel): Flow<NetworkResult<StudentProfileUiModel>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.removeProfilePhoto()
         if (response.isSuccessful) {
             val updatedProfile = parseProfile(response.body(), fallback = currentProfile.copy(profilePhotoUrl = null))
@@ -143,11 +149,12 @@ class StudentProfileRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun deleteAccount(): Flow<NetworkResult<String>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.deleteProfile()
         if (response.isSuccessful) {
             tokenManager.clearAllData()
@@ -156,7 +163,7 @@ class StudentProfileRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     private fun parseProfile(

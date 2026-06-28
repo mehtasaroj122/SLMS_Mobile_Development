@@ -31,12 +31,15 @@ import com.saroj.lmsmobile.api.RetrofitClient
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.repository.StaffProfileRepository
 import com.saroj.lmsmobile.ui.auth.LoginActivity
+import com.saroj.lmsmobile.ui.components.OnlineRefreshable
+import com.saroj.lmsmobile.ui.components.runIfOnline
 import com.saroj.lmsmobile.ui.staff.model.StaffProfileUiModel
 import com.saroj.lmsmobile.ui.staff.model.defaultStaffProfile
 import com.saroj.lmsmobile.ui.staff.viewmodel.StaffProfileViewModel
 import com.saroj.lmsmobile.ui.student.model.ProfileTab
 import com.saroj.lmsmobile.utils.Constants
 import com.saroj.lmsmobile.utils.LmsToast
+import com.saroj.lmsmobile.utils.NetworkMessages
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,7 +47,7 @@ import java.io.File
 import java.net.URL
 import java.util.Locale
 
-class StaffProfileScreen : Fragment() {
+class StaffProfileScreen : Fragment(), OnlineRefreshable {
     private lateinit var viewModel: StaffProfileViewModel
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
     private var selectedTab = ProfileTab.PROFILE
@@ -108,9 +111,15 @@ class StaffProfileScreen : Fragment() {
             R.color.profile_orange
         )
         swipeRefreshLayout.setOnRefreshListener {
-            if (isEditMode) exitEditMode(restoreValues = true)
-            viewModel.refresh()
+            runIfOnline(onOffline = { swipeRefreshLayout.isRefreshing = false }) {
+                if (isEditMode) exitEditMode(restoreValues = true)
+                viewModel.refresh()
+            }
         }
+    }
+
+    override fun refreshAfterOnline() {
+        if (!isEditMode) viewModel.refresh()
     }
 
     private fun observeProfile() {
@@ -287,7 +296,7 @@ class StaffProfileScreen : Fragment() {
             exitEditMode(restoreValues = true)
         }
         view?.findViewById<View>(R.id.buttonProfileSave)?.setOnClickListener {
-            saveProfile()
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) { saveProfile() }
         }
         exitEditMode(restoreValues = false)
     }
@@ -376,7 +385,7 @@ class StaffProfileScreen : Fragment() {
                 showToast("Choose a photo first.")
                 return@setOnClickListener
             }
-            viewModel.uploadPhoto(file)
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.uploadPhoto(file) }
         }
         view?.findViewById<View>(R.id.buttonRemovePhoto)?.setOnClickListener {
             showRemovePhotoDialog()
@@ -463,7 +472,9 @@ class StaffProfileScreen : Fragment() {
                 val currentPassword = view?.findViewById<EditText>(R.id.editCurrentPassword)?.text?.toString().orEmpty()
                 val newPassword = view?.findViewById<EditText>(R.id.editNewPassword)?.text?.toString().orEmpty()
                 val confirmPassword = view?.findViewById<EditText>(R.id.editConfirmPassword)?.text?.toString().orEmpty()
-                viewModel.changePassword(currentPassword, newPassword, confirmPassword)
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) {
+                    viewModel.changePassword(currentPassword, newPassword, confirmPassword)
+                }
             }
         }
         updatePasswordRequirements()
@@ -582,8 +593,10 @@ class StaffProfileScreen : Fragment() {
                             deleteInput.error = "Type DELETE to confirm"
                             return@setOnClickListener
                         }
-                        dismiss()
-                        viewModel.deleteAccount(password, confirmation)
+                        runIfOnline(NetworkMessages.OFFLINE_RETRY) {
+                            dismiss()
+                            viewModel.deleteAccount(password, confirmation)
+                        }
                     }
                 }
             }
@@ -596,7 +609,7 @@ class StaffProfileScreen : Fragment() {
             .setMessage("This will show your initials until a new photo is uploaded.")
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Remove") { _, _ ->
-                viewModel.removePhoto()
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.removePhoto() }
             }
             .show()
     }

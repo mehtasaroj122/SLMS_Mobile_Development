@@ -27,6 +27,8 @@ import com.saroj.lmsmobile.api.RetrofitClient
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.repository.StaffBookRequestRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
+import com.saroj.lmsmobile.ui.components.OnlineRefreshable
+import com.saroj.lmsmobile.ui.components.runIfOnline
 import com.saroj.lmsmobile.ui.staff.adapter.StaffBookRequestsAdapter
 import com.saroj.lmsmobile.ui.staff.model.StaffBookRequestStatus
 import com.saroj.lmsmobile.ui.staff.model.StaffBookRequestUiModel
@@ -34,8 +36,9 @@ import com.saroj.lmsmobile.ui.staff.model.StaffBookRequestsSummaryUiModel
 import com.saroj.lmsmobile.ui.staff.model.StaffBookRequestsTab
 import com.saroj.lmsmobile.ui.staff.viewmodel.StaffBookRequestsViewModel
 import com.saroj.lmsmobile.utils.LmsToast
+import com.saroj.lmsmobile.utils.NetworkMessages
 
-class StaffBookRequestsScreen : Fragment() {
+class StaffBookRequestsScreen : Fragment(), OnlineRefreshable {
 
     private lateinit var viewModel: StaffBookRequestsViewModel
     private lateinit var adapter: StaffBookRequestsAdapter
@@ -150,7 +153,10 @@ class StaffBookRequestsScreen : Fragment() {
             val content = nestedScrollView.getChildAt(0) ?: return@setOnScrollChangeListener
             val distanceFromBottom = content.measuredHeight - nestedScrollView.measuredHeight - scrollY
             if (distanceFromBottom <= 96) {
-                viewModel.loadNextPage()
+                runIfOnline(
+                    offlineMessage = "You are offline. More data cannot be loaded right now.",
+                    onOffline = { loadMoreProgress.visibility = View.GONE }
+                ) { viewModel.loadNextPage() }
             }
         }
     }
@@ -161,7 +167,15 @@ class StaffBookRequestsScreen : Fragment() {
             R.color.my_requests_orange,
             R.color.my_requests_green
         )
-        swipeRefreshLayout.setOnRefreshListener { viewModel.refresh() }
+        swipeRefreshLayout.setOnRefreshListener {
+            runIfOnline(onOffline = { swipeRefreshLayout.isRefreshing = false }) {
+                viewModel.refresh()
+            }
+        }
+    }
+
+    override fun refreshAfterOnline() {
+        viewModel.refresh()
     }
 
     private fun setupTabs(view: View) {
@@ -255,7 +269,9 @@ class StaffBookRequestsScreen : Fragment() {
         emptyTitle.text = "Unable to load requests"
         emptyMessage.text = message
         retryButton.visibility = View.VISIBLE
-        retryButton.setOnClickListener { viewModel.refresh() }
+        retryButton.setOnClickListener {
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.refresh() }
+        }
         emptyState.visibility = View.VISIBLE
     }
 
@@ -315,7 +331,7 @@ class StaffBookRequestsScreen : Fragment() {
             )
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Accept") { _, _ ->
-                viewModel.approveRequest(request)
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.approveRequest(request) }
             }
             .show()
     }
@@ -331,7 +347,7 @@ class StaffBookRequestsScreen : Fragment() {
             )
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Reject") { _, _ ->
-                viewModel.rejectRequest(request)
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.rejectRequest(request) }
             }
             .show()
     }

@@ -31,6 +31,7 @@ class StudentMyBooksRepository(
     fun getSummary(): Flow<NetworkResult<MyBooksSummaryUiModel>> = flow {
         val cached = LocalCacheProvider.cache?.read(CACHE_KEY_SUMMARY, MyBooksSummaryUiModel::class.java)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getStudentMyBooksSummary()
         if (response.isSuccessful) {
             val summary = parseSummary(response.body())
@@ -40,7 +41,7 @@ class StudentMyBooksRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun getCurrentBooks(): Flow<NetworkResult<List<MyBookUiModel>>> = loadBooks(
@@ -66,6 +67,7 @@ class StudentMyBooksRepository(
         val listType = object : TypeToken<List<MyBookUiModel>>() {}.type
         val cached = LocalCacheProvider.cache?.read<List<MyBookUiModel>>(cacheKey, listType)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = request()
         if (response.isSuccessful) {
             val books = extractBookElements(response.body()).mapIndexed { index, element ->
@@ -77,7 +79,7 @@ class StudentMyBooksRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     private fun parseSummary(root: JsonElement?): MyBooksSummaryUiModel {

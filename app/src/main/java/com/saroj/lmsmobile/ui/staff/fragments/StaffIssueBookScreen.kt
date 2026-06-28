@@ -38,13 +38,16 @@ import com.saroj.lmsmobile.data.models.issue.IssuePrivilegesData
 import com.saroj.lmsmobile.data.models.issue.IssueStudent
 import com.saroj.lmsmobile.data.repository.StaffIssueBookRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
+import com.saroj.lmsmobile.ui.components.OnlineRefreshable
+import com.saroj.lmsmobile.ui.components.runIfOnline
 import com.saroj.lmsmobile.ui.staff.viewmodel.StaffIssueBookViewModel
 import com.saroj.lmsmobile.utils.Constants
 import com.saroj.lmsmobile.utils.LmsToast
+import com.saroj.lmsmobile.utils.NetworkMessages
 import java.net.URL
 import kotlin.concurrent.thread
 
-class StaffIssueBookScreen : Fragment() {
+class StaffIssueBookScreen : Fragment(), OnlineRefreshable {
     private lateinit var viewModel: StaffIssueBookViewModel
     private lateinit var studentInput: EditText
     private lateinit var bookInput: EditText
@@ -137,11 +140,20 @@ class StaffIssueBookScreen : Fragment() {
                 LmsToast.show(requireContext(), "Search or select a student first.")
                 return@setOnRefreshListener
             }
-            viewModel.refreshPage(
-                studentQuery = studentQuery,
-                bookQuery = bookQuery
-            )
+            runIfOnline(onOffline = { swipeRefresh.isRefreshing = false }) {
+                viewModel.refreshPage(
+                    studentQuery = studentQuery,
+                    bookQuery = bookQuery
+                )
+            }
         }
+    }
+
+    override fun refreshAfterOnline() {
+        viewModel.refreshPage(
+            studentQuery = studentInput.text?.toString().orEmpty(),
+            bookQuery = bookInput.text?.toString().orEmpty()
+        )
     }
 
     private fun setupInputs() {
@@ -189,9 +201,15 @@ class StaffIssueBookScreen : Fragment() {
             if (distanceFromBottom > dp(96)) return@setOnScrollChangeListener
 
             if (viewModel.selectedStudent.value == null) {
-                viewModel.loadMoreStudents()
+                runIfOnline(
+                    offlineMessage = "You are offline. More data cannot be loaded right now.",
+                    onOffline = { studentLoadMoreProgress.visibility = View.GONE }
+                ) { viewModel.loadMoreStudents() }
             } else {
-                viewModel.loadMoreBooks()
+                runIfOnline(
+                    offlineMessage = "You are offline. More data cannot be loaded right now.",
+                    onOffline = { bookLoadMoreProgress.visibility = View.GONE }
+                ) { viewModel.loadMoreBooks() }
             }
         }
     }
@@ -344,7 +362,9 @@ class StaffIssueBookScreen : Fragment() {
         val error = viewModel.privilegeError.value
         if (!error.isNullOrBlank()) {
             val card = defaultStateCard("Unable to load issue privileges", error.take(140), R.drawable.ic_warning)
-            card.setOnClickListener { viewModel.refreshStudentPrivileges() }
+            card.setOnClickListener {
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.refreshStudentPrivileges() }
+            }
             privilegesContainer.addView(card)
             return
         }
@@ -471,7 +491,9 @@ class StaffIssueBookScreen : Fragment() {
                 }
             )
             .setNegativeButton("Cancel", null)
-            .setPositiveButton("Confirm Issue") { _, _ -> viewModel.issueSelectedBooks() }
+            .setPositiveButton("Confirm Issue") { _, _ ->
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.issueSelectedBooks() }
+            }
             .show()
     }
 

@@ -40,6 +40,7 @@ class StaffIssueBookRepository(
         pageSize: Int = DEFAULT_PAGE_SIZE
     ): Flow<NetworkResult<StudentSearchResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.searchStaffIssueStudents(query, page = page, pageSize = pageSize)
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseStudentSearch(response.body())))
@@ -50,11 +51,12 @@ class StaffIssueBookRepository(
         }
     }.catch { e ->
         Log.e(TAG, "Student search failed", e)
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun getStudentIssueContext(student: IssueStudent): Flow<NetworkResult<StudentIssueContext>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val detailedStudent = loadStudentDetail(student)
         val activeIssueCount = loadActiveIssueCount(student.id)
         val enrichedStudent = detailedStudent.copy(
@@ -74,7 +76,7 @@ class StaffIssueBookRepository(
         }
     }.catch { e ->
         Log.e(TAG, "Student issue context failed", e)
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun searchBooks(
@@ -84,6 +86,7 @@ class StaffIssueBookRepository(
         pageSize: Int = DEFAULT_PAGE_SIZE
     ): Flow<NetworkResult<BookSearchResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.searchStaffIssueBooks(
             query = query,
             studentId = studentId,
@@ -99,11 +102,12 @@ class StaffIssueBookRepository(
         }
     }.catch { e ->
         Log.e(TAG, "Book search failed", e)
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun issueBooks(studentId: Int, bookIds: List<Int>): Flow<NetworkResult<IssueBooksResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.issueStaffBooks(IssueBooksRequest(studentId, bookIds))
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseIssueResponse(response.body(), bookIds.size)))
@@ -114,7 +118,7 @@ class StaffIssueBookRepository(
         }
     }.catch { e ->
         Log.e(TAG, "Issue books failed", e)
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     private suspend fun issueBooksOneByOne(studentId: Int, bookIds: List<Int>): NetworkResult<IssueBooksResponse> {

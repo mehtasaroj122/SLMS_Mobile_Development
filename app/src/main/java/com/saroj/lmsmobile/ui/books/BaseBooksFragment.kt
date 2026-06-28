@@ -28,12 +28,15 @@ import com.saroj.lmsmobile.data.repository.BookRepository
 import com.saroj.lmsmobile.ui.books.adapter.BookAdapter
 import com.saroj.lmsmobile.ui.books.viewmodel.BookViewModel
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
+import com.saroj.lmsmobile.ui.components.OnlineRefreshable
+import com.saroj.lmsmobile.ui.components.runIfOnline
 import com.saroj.lmsmobile.utils.Constants
+import com.saroj.lmsmobile.utils.NetworkMessages
 
 abstract class BaseBooksFragment(
     @param:LayoutRes private val layoutResId: Int,
     private val mode: Mode
-) : Fragment() {
+) : Fragment(), OnlineRefreshable {
 
     enum class Mode {
         ALL,
@@ -122,7 +125,12 @@ abstract class BaseBooksFragment(
                 val firstVisibleItem = layoutManager.findFirstVisibleItemPosition()
 
                 if (totalItems > 0 && visibleItems + firstVisibleItem >= totalItems - 4) {
-                    viewModel.loadNextPage()
+                    runIfOnline(
+                        offlineMessage = "You are offline. More data cannot be loaded right now.",
+                        onOffline = { bottomProgressBar?.visibility = View.GONE }
+                    ) {
+                        viewModel.loadNextPage()
+                    }
                 }
             }
         })
@@ -130,11 +138,13 @@ abstract class BaseBooksFragment(
 
     private fun setupListeners() {
         retryButton.setOnClickListener {
-            if (mode == Mode.ALL) {
-                viewModel.loadBooks(refresh = true)
-            } else {
-                val query = searchEditText?.text?.toString().orEmpty()
-                if (query.isBlank()) showSearchPrompt() else viewModel.searchBooks(query, refresh = true)
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) {
+                if (mode == Mode.ALL) {
+                    viewModel.loadBooks(refresh = true)
+                } else {
+                    val query = searchEditText?.text?.toString().orEmpty()
+                    if (query.isBlank()) showSearchPrompt() else viewModel.searchBooks(query, refresh = true)
+                }
             }
         }
 
@@ -147,6 +157,15 @@ abstract class BaseBooksFragment(
             } else {
                 viewModel.searchBooks(query, refresh = true)
             }
+        }
+    }
+
+    override fun refreshAfterOnline() {
+        if (mode == Mode.ALL) {
+            viewModel.loadBooks(refresh = true)
+        } else {
+            val query = searchEditText?.text?.toString().orEmpty()
+            if (query.isBlank()) showSearchPrompt() else viewModel.searchBooks(query, refresh = true)
         }
     }
 

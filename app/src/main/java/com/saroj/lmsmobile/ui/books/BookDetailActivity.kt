@@ -17,9 +17,12 @@ import com.saroj.lmsmobile.data.repository.BookRepository
 import com.saroj.lmsmobile.ui.books.viewmodel.BookViewModel
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
 import com.saroj.lmsmobile.ui.components.BaseActivity
+import com.saroj.lmsmobile.ui.components.OnlineRefreshable
+import com.saroj.lmsmobile.network.NetworkMonitor
 import com.saroj.lmsmobile.utils.Constants
+import com.saroj.lmsmobile.utils.NetworkMessages
 
-class BookDetailActivity : BaseActivity() {
+class BookDetailActivity : BaseActivity(), OnlineRefreshable {
 
     private lateinit var viewModel: BookViewModel
     private lateinit var detailScrollView: ScrollView
@@ -92,8 +95,16 @@ class BookDetailActivity : BaseActivity() {
 
     private fun setupListeners() {
         retryButton.setOnClickListener {
+            if (!NetworkMonitor.isCurrentlyOnline()) {
+                showNetworkMessage(NetworkMessages.OFFLINE_RETRY)
+                return@setOnClickListener
+            }
             if (bookId != -1) viewModel.loadBookDetail(bookId)
         }
+    }
+
+    override fun refreshAfterOnline() {
+        if (bookId != -1) viewModel.loadBookDetail(bookId)
     }
 
     private fun observeBookDetail() {

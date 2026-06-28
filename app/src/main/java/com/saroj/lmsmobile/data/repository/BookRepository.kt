@@ -44,10 +44,11 @@ class BookRepository(
         val type = object : TypeToken<PaginatedResponse<Book>>() {}.type
         val cached = LocalCacheProvider.cache?.read<PaginatedResponse<Book>>(cacheKey, type)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getBooksJson(page, category, availability, condition, pageSize)
         handleBookListResponse(response, page, pageSize, cacheKey).collect { emit(it) }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     /**
@@ -57,6 +58,7 @@ class BookRepository(
         val cacheKey = "books:detail:$id"
         val cached = LocalCacheProvider.cache?.read(cacheKey, Book::class.java)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         try {
             val response = apiService.getBookDetail(id)
             if (response.isSuccessful) {
@@ -71,10 +73,10 @@ class BookRepository(
                 handleError(response).collect { emit(it) }
             }
         } catch (e: Exception) {
-            emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+            emit(NetworkResult.Error(e.toRepositoryMessage()))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     /**
@@ -93,14 +95,15 @@ class BookRepository(
         val type = object : TypeToken<PaginatedResponse<Book>>() {}.type
         val cached = LocalCacheProvider.cache?.read<PaginatedResponse<Book>>(cacheKey, type)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         try {
             val response = apiService.searchBooksJson(query, page, category, availability, condition, pageSize)
             handleBookListResponse(response, page, pageSize, cacheKey).collect { emit(it) }
         } catch (e: Exception) {
-            emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+            emit(NetworkResult.Error(e.toRepositoryMessage()))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     /**
@@ -111,14 +114,15 @@ class BookRepository(
         val type = object : TypeToken<PaginatedResponse<Book>>() {}.type
         val cached = LocalCacheProvider.cache?.read<PaginatedResponse<Book>>(cacheKey, type)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         try {
             val response = apiService.getAvailableBooks(page, pageSize)
             handlePaginatedResponse(response, cacheKey).collect { emit(it) }
         } catch (e: Exception) {
-            emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+            emit(NetworkResult.Error(e.toRepositoryMessage()))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     /**
@@ -126,6 +130,7 @@ class BookRepository(
      */
     fun submitStudentBookRequest(bookId: Int): Flow<NetworkResult<StudentBookRequestResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.submitStudentBookRequest(StudentBookRequestBody(bookId))
         if (response.isSuccessful) {
             emit(
@@ -137,7 +142,7 @@ class BookRepository(
             handleError(response).collect { emit(it) }
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     /**
@@ -148,10 +153,11 @@ class BookRepository(
         val type = object : TypeToken<PaginatedResponse<BookRequestModel>>() {}.type
         val cached = LocalCacheProvider.cache?.read<PaginatedResponse<BookRequestModel>>(cacheKey, type)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getStudentBookRequests(page)
         handlePaginatedResponse(response, cacheKey).collect { emit(it) }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     /**

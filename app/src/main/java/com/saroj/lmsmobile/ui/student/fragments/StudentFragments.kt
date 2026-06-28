@@ -53,6 +53,8 @@ import com.saroj.lmsmobile.data.repository.StudentMyFinesRepository
 import com.saroj.lmsmobile.data.repository.StudentProfileRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
 import com.saroj.lmsmobile.ui.auth.LoginActivity
+import com.saroj.lmsmobile.ui.components.OnlineRefreshable
+import com.saroj.lmsmobile.ui.components.runIfOnline
 import com.saroj.lmsmobile.ui.student.StudentDashboardActivity
 import com.saroj.lmsmobile.ui.student.adapter.MyFinesAdapter
 import com.saroj.lmsmobile.ui.student.adapter.MyBooksAdapter
@@ -81,6 +83,7 @@ import com.saroj.lmsmobile.ui.student.viewmodel.StudentProfileViewModel
 import com.saroj.lmsmobile.ui.student.viewmodel.StudentSearchBooksViewModel
 import com.saroj.lmsmobile.utils.Constants
 import com.saroj.lmsmobile.utils.LmsToast
+import com.saroj.lmsmobile.utils.NetworkMessages
 import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
@@ -93,7 +96,7 @@ import java.util.Locale
 import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
-class StudentDashboardFragment : Fragment() {
+class StudentDashboardFragment : Fragment(), OnlineRefreshable {
     private lateinit var viewModel: StudentDashboardViewModel
     private lateinit var notificationRepository: NotificationRepository
     private var refreshToastPending = false
@@ -196,10 +199,17 @@ class StudentDashboardFragment : Fragment() {
                 R.color.student_yellow
             )
             setOnRefreshListener {
-                refreshToastPending = true
-                viewModel.refreshDashboard()
+                runIfOnline(onOffline = { isRefreshing = false }) {
+                    refreshToastPending = true
+                    viewModel.refreshDashboard()
+                }
             }
         }
+    }
+
+    override fun refreshAfterOnline() {
+        viewModel.refreshDashboard()
+        loadNotificationCount()
     }
 
     private fun bindStudent(view: View, dashboard: StudentDashboardData) {
@@ -768,7 +778,7 @@ class StudentDashboardFragment : Fragment() {
     }
 }
 
-class StudentSearchBooksFragment : Fragment() {
+class StudentSearchBooksFragment : Fragment(), OnlineRefreshable {
     private lateinit var viewModel: StudentSearchBooksViewModel
     private lateinit var adapter: StudentSearchBookAdapter
     private lateinit var foundBooksText: TextView
@@ -852,7 +862,9 @@ class StudentSearchBooksFragment : Fragment() {
                 val totalItems = layoutManager.itemCount
                 val lastVisibleItem = layoutManager.findLastVisibleItemPosition()
                 if (totalItems > 0 && lastVisibleItem >= totalItems - 4) {
-                    viewModel.loadNextPage()
+                    runIfOnline("You are offline. More data cannot be loaded right now.") {
+                        viewModel.loadNextPage()
+                    }
                 }
             }
         })
@@ -890,10 +902,12 @@ class StudentSearchBooksFragment : Fragment() {
         }
 
         retryButton.setOnClickListener {
-            if (currentQuery.isBlank()) {
-                viewModel.loadBooks(refresh = true)
-            } else {
-                viewModel.searchBooks(currentQuery)
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) {
+                if (currentQuery.isBlank()) {
+                    viewModel.loadBooks(refresh = true)
+                } else {
+                    viewModel.searchBooks(currentQuery)
+                }
             }
         }
     }
@@ -905,8 +919,14 @@ class StudentSearchBooksFragment : Fragment() {
             R.color.search_orange
         )
         swipeRefreshLayout.setOnRefreshListener {
-            viewModel.refresh()
+            runIfOnline(onOffline = { swipeRefreshLayout.isRefreshing = false }) {
+                viewModel.refresh()
+            }
         }
+    }
+
+    override fun refreshAfterOnline() {
+        viewModel.refresh()
     }
 
     private fun showCategoryDialog() {
@@ -1099,7 +1119,7 @@ class StudentSearchBooksFragment : Fragment() {
      */
 }
 
-class StudentMyBooksFragment : Fragment() {
+class StudentMyBooksFragment : Fragment(), OnlineRefreshable {
     private lateinit var viewModel: StudentMyBooksViewModel
     private lateinit var adapter: MyBooksAdapter
     private lateinit var searchEditText: EditText
@@ -1188,7 +1208,9 @@ class StudentMyBooksFragment : Fragment() {
             R.color.my_books_orange
         )
         swipeRefreshLayout.setOnRefreshListener {
-            viewModel.refresh()
+            runIfOnline(onOffline = { swipeRefreshLayout.isRefreshing = false }) {
+                viewModel.refresh()
+            }
         }
     }
 
@@ -1269,8 +1291,14 @@ class StudentMyBooksFragment : Fragment() {
         emptyTitle.text = "Unable to load books"
         emptyMessage.text = message
         emptyActionButton.text = "Retry"
-        emptyActionButton.setOnClickListener { viewModel.refresh() }
+        emptyActionButton.setOnClickListener {
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.refresh() }
+        }
         emptyState.visibility = View.VISIBLE
+    }
+
+    override fun refreshAfterOnline() {
+        viewModel.refresh()
     }
 
     private fun updateSummaryCards(summary: MyBooksSummaryUiModel) {
@@ -1471,7 +1499,7 @@ class StudentMyBooksFragment : Fragment() {
     )
 }
 
-class StudentMyFinesFragment : Fragment() {
+class StudentMyFinesFragment : Fragment(), OnlineRefreshable {
     private lateinit var viewModel: StudentMyFinesViewModel
     private lateinit var adapter: MyFinesAdapter
     private lateinit var searchEditText: EditText
@@ -1556,7 +1584,9 @@ class StudentMyFinesFragment : Fragment() {
             R.color.my_fines_orange
         )
         swipeRefreshLayout.setOnRefreshListener {
-            viewModel.refresh()
+            runIfOnline(onOffline = { swipeRefreshLayout.isRefreshing = false }) {
+                viewModel.refresh()
+            }
         }
     }
 
@@ -1645,8 +1675,14 @@ class StudentMyFinesFragment : Fragment() {
         emptyTitle.text = "Unable to load fines"
         emptyMessage.text = message
         emptyActionButton.text = "Retry"
-        emptyActionButton.setOnClickListener { viewModel.refresh() }
+        emptyActionButton.setOnClickListener {
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.refresh() }
+        }
         emptyState.visibility = View.VISIBLE
+    }
+
+    override fun refreshAfterOnline() {
+        viewModel.refresh()
     }
 
     private fun updateSummaryCards(summary: MyFinesSummaryUiModel) {
@@ -1808,7 +1844,7 @@ class StudentMyFinesFragment : Fragment() {
     )
 }
 
-class StudentProfileFragment : Fragment() {
+class StudentProfileFragment : Fragment(), OnlineRefreshable {
     private lateinit var viewModel: StudentProfileViewModel
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
     private var selectedTab = ProfileTab.PROFILE
@@ -1899,9 +1935,15 @@ class StudentProfileFragment : Fragment() {
             R.color.profile_orange
         )
         swipeRefreshLayout.setOnRefreshListener {
-            if (isEditMode) exitEditMode(restoreValues = true)
-            viewModel.refresh()
+            runIfOnline(onOffline = { swipeRefreshLayout.isRefreshing = false }) {
+                if (isEditMode) exitEditMode(restoreValues = true)
+                viewModel.refresh()
+            }
         }
+    }
+
+    override fun refreshAfterOnline() {
+        if (!isEditMode) viewModel.refresh()
     }
 
     private fun observeProfile() {
@@ -2092,7 +2134,7 @@ class StudentProfileFragment : Fragment() {
             exitEditMode(restoreValues = true)
         }
         view?.findViewById<View>(R.id.buttonProfileSave)?.setOnClickListener {
-            saveDummyProfile()
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) { saveProfile() }
         }
         exitEditMode(restoreValues = false)
     }
@@ -2135,7 +2177,7 @@ class StudentProfileFragment : Fragment() {
         setGenderEditable(false)
     }
 
-    private fun saveDummyProfile() {
+    private fun saveProfile() {
         val fullName = view?.findViewById<EditText>(R.id.editProfileFullName)?.text?.toString()?.trim().orEmpty()
         val email = view?.findViewById<EditText>(R.id.editProfileEmail)?.text?.toString()?.trim().orEmpty()
         val phone = view?.findViewById<EditText>(R.id.editProfilePhone)?.text?.toString()?.trim().orEmpty()
@@ -2206,10 +2248,10 @@ class StudentProfileFragment : Fragment() {
                 showToast("Choose a photo first.")
                 return@setOnClickListener
             }
-            viewModel.uploadPhoto(file)
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.uploadPhoto(file) }
         }
         view?.findViewById<View>(R.id.buttonRemovePhoto)?.setOnClickListener {
-            showRemovePhotoDialog()
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) { showRemovePhotoDialog() }
         }
     }
 
@@ -2273,7 +2315,9 @@ class StudentProfileFragment : Fragment() {
                 val currentPassword = view?.findViewById<EditText>(R.id.editCurrentPassword)?.text?.toString().orEmpty()
                 val newPassword = view?.findViewById<EditText>(R.id.editNewPassword)?.text?.toString().orEmpty()
                 val confirmPassword = view?.findViewById<EditText>(R.id.editConfirmPassword)?.text?.toString().orEmpty()
-                viewModel.changePassword(currentPassword, newPassword, confirmPassword)
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) {
+                    viewModel.changePassword(currentPassword, newPassword, confirmPassword)
+                }
             }
         }
         updatePasswordRequirements()
@@ -2369,7 +2413,7 @@ class StudentProfileFragment : Fragment() {
                     getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                         if (input.text?.toString()?.trim() == "DELETE") {
                             dismiss()
-                            viewModel.deleteAccount()
+                            runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.deleteAccount() }
                         } else {
                             input.error = "Type DELETE to confirm"
                         }
@@ -2385,7 +2429,7 @@ class StudentProfileFragment : Fragment() {
             .setMessage("This will show your initials until a new photo is uploaded.")
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Remove") { _, _ ->
-                viewModel.removePhoto()
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.removePhoto() }
             }
             .show()
     }

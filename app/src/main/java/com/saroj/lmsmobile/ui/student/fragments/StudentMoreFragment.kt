@@ -20,6 +20,7 @@ import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.repository.NotificationRepository
 import com.saroj.lmsmobile.data.repository.StudentProfileRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
+import com.saroj.lmsmobile.ui.components.OnlineRefreshable
 import com.saroj.lmsmobile.ui.student.StudentDashboardActivity
 import com.saroj.lmsmobile.ui.student.model.StudentProfileUiModel
 import com.saroj.lmsmobile.ui.theme.DarkModeToggleBinder
@@ -32,7 +33,7 @@ import kotlinx.coroutines.withContext
 import java.net.URL
 import java.util.Locale
 
-class StudentMoreFragment : Fragment() {
+class StudentMoreFragment : Fragment(), OnlineRefreshable {
     private var profilePhotoTag: String? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
@@ -57,6 +58,13 @@ class StudentMoreFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        view?.let {
+            loadProfile(it)
+            loadNotificationBadge(it)
+        }
+    }
+
+    override fun refreshAfterOnline() {
         view?.let {
             loadProfile(it)
             loadNotificationBadge(it)

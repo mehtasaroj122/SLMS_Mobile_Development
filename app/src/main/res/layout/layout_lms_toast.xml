@@ -8,6 +8,7 @@
     android:orientation="horizontal">
 
     <ImageView
+        android:id="@+id/imageLmsToastLogo"
         android:layout_width="28dp"
         android:layout_height="28dp"
         android:contentDescription="@null"
@@ -19,6 +20,6 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
         android:maxWidth="280dp"
-        android:textColor="@color/student_text_primary"
+        android:textColor="@color/lms_toast_text"
         android:textSize="14sp" />
 </LinearLayout>

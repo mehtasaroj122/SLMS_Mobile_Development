@@ -26,6 +26,7 @@ class StaffFinesRepository(
     fun getFineSummary(): Flow<NetworkResult<FineSummaryResponse>> = flow {
         val cached = LocalCacheProvider.cache?.read(CACHE_KEY_SUMMARY, FineSummaryResponse::class.java)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getStaffFineSummary()
         if (response.isSuccessful) {
             val body = response.body() ?: FineSummaryResponse()
@@ -35,7 +36,7 @@ class StaffFinesRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun getFineStudents(search: String? = null): Flow<NetworkResult<FineStudentListResponse>> = flow {
@@ -43,6 +44,7 @@ class StaffFinesRepository(
         val cacheKey = "staff:fines:students:query=${query.orEmpty()}"
         val cached = LocalCacheProvider.cache?.read(cacheKey, FineStudentListResponse::class.java)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getStaffFineStudents(query)
         if (response.isSuccessful) {
             val body = response.body() ?: FineStudentListResponse()
@@ -52,13 +54,14 @@ class StaffFinesRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun getStudentFineDetails(studentId: Int): Flow<NetworkResult<StudentFineDetailResponse>> = flow {
         val cacheKey = "staff:fines:detail:$studentId"
         val cached = LocalCacheProvider.cache?.read(cacheKey, StudentFineDetailResponse::class.java)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getStudentFineDetails(studentId)
         if (response.isSuccessful) {
             val body = response.body() ?: StudentFineDetailResponse()
@@ -68,11 +71,12 @@ class StaffFinesRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun markFinePaid(fineId: Int): Flow<NetworkResult<FineActionResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.markFinePaid(fineId)
         if (response.isSuccessful) {
             emit(NetworkResult.Success(response.body() ?: FineActionResponse()))
@@ -80,11 +84,12 @@ class StaffFinesRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun waiveFine(fineId: Int, reason: String): Flow<NetworkResult<FineActionResponse>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.waiveFine(fineId, WaiveFineRequest(reason.trim()))
         if (response.isSuccessful) {
             emit(NetworkResult.Success(response.body() ?: FineActionResponse()))
@@ -92,7 +97,7 @@ class StaffFinesRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     private suspend fun <T> handleError(response: Response<*>): NetworkResult<T> =

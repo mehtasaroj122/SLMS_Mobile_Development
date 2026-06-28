@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.saroj.lmsmobile.api.interceptor.AuthInterceptor
+import com.saroj.lmsmobile.network.NetworkStatusInterceptor
 import com.saroj.lmsmobile.storage.TokenManager
 import com.saroj.lmsmobile.utils.Constants
 import okhttp3.OkHttpClient
@@ -76,6 +77,8 @@ object RetrofitClient {
      */
     private fun createOkHttpClient(tokenManager: TokenManager): OkHttpClient {
         val builder = OkHttpClient.Builder()
+
+        builder.addInterceptor(NetworkStatusInterceptor())
 
         // Add Auth Interceptor (adds Bearer token to all requests)
         builder.addInterceptor(AuthInterceptor(tokenManager))

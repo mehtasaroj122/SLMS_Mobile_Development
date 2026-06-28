@@ -38,6 +38,8 @@ import com.saroj.lmsmobile.data.models.staffstudents.StudentFineItem
 import com.saroj.lmsmobile.data.models.staffstudents.StudentIssuedBookItem
 import com.saroj.lmsmobile.data.repository.StaffStudentsRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
+import com.saroj.lmsmobile.ui.components.OnlineRefreshable
+import com.saroj.lmsmobile.ui.components.runIfOnline
 import com.saroj.lmsmobile.ui.staff.StaffDashboardActivity
 import com.saroj.lmsmobile.ui.staff.viewmodel.StaffStudentDetailTab
 import com.saroj.lmsmobile.ui.staff.viewmodel.StaffStudentDetailViewModel
@@ -45,12 +47,13 @@ import com.saroj.lmsmobile.ui.staff.viewmodel.StaffStudentsStatus
 import com.saroj.lmsmobile.ui.staff.viewmodel.StaffStudentsViewModel
 import com.saroj.lmsmobile.utils.Constants
 import com.saroj.lmsmobile.utils.LmsToast
+import com.saroj.lmsmobile.utils.NetworkMessages
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.concurrent.thread
 
-class StaffStudentsScreen : Fragment() {
+class StaffStudentsScreen : Fragment(), OnlineRefreshable {
     private lateinit var viewModel: StaffStudentsViewModel
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var studentsContainer: LinearLayout
@@ -79,7 +82,7 @@ class StaffStudentsScreen : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        if (initialLoadStarted) viewModel.refresh()
+        if (initialLoadStarted) runIfOnline { viewModel.refresh() }
     }
 
     private fun setupViewModel() {
@@ -113,7 +116,13 @@ class StaffStudentsScreen : Fragment() {
             R.color.student_green,
             R.color.student_yellow
         )
-        swipeRefresh.setOnRefreshListener { viewModel.refresh() }
+        swipeRefresh.setOnRefreshListener {
+            runIfOnline(onOffline = { swipeRefresh.isRefreshing = false }) { viewModel.refresh() }
+        }
+    }
+
+    override fun refreshAfterOnline() {
+        viewModel.refresh()
     }
 
     private fun setupSearch() {
@@ -188,7 +197,9 @@ class StaffStudentsScreen : Fragment() {
     private fun renderError(message: String) {
         studentsContainer.removeAllViews()
         val card = defaultStateCard("Unable to load students", message.take(140), R.drawable.ic_warning)
-        card.setOnClickListener { viewModel.refresh() }
+        card.setOnClickListener {
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.refresh() }
+        }
         studentsContainer.addView(card)
     }
 
@@ -274,7 +285,7 @@ class StaffStudentsScreen : Fragment() {
     }
 }
 
-class StaffStudentDetailScreen : Fragment() {
+class StaffStudentDetailScreen : Fragment(), OnlineRefreshable {
     private lateinit var viewModel: StaffStudentDetailViewModel
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private lateinit var topProgress: ProgressBar
@@ -300,10 +311,16 @@ class StaffStudentDetailScreen : Fragment() {
             requireActivity().onBackPressedDispatcher.onBackPressed()
         }
         swipeRefresh.setColorSchemeResources(R.color.student_primary, R.color.student_purple, R.color.student_green, R.color.student_yellow)
-        swipeRefresh.setOnRefreshListener { viewModel.refreshAll() }
+        swipeRefresh.setOnRefreshListener {
+            runIfOnline(onOffline = { swipeRefresh.isRefreshing = false }) { viewModel.refreshAll() }
+        }
         setupTabs(view)
         setupObservers(view)
         viewModel.loadStudentDetails(studentId)
+    }
+
+    override fun refreshAfterOnline() {
+        viewModel.refreshAll()
     }
 
     private fun setupViewModel() {
@@ -422,7 +439,9 @@ class StaffStudentDetailScreen : Fragment() {
     private fun renderProfileError(message: String) {
         profileContainer.removeAllViews()
         val card = defaultStateCard("Unable to load student details", message.take(140), R.drawable.ic_warning)
-        card.setOnClickListener { viewModel.loadStudentDetails(studentId) }
+        card.setOnClickListener {
+            runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.loadStudentDetails(studentId) }
+        }
         profileContainer.addView(card)
     }
 
@@ -556,7 +575,9 @@ class StaffStudentDetailScreen : Fragment() {
             .setTitle("Mark Fine as Paid?")
             .setMessage("${formatCurrency(fine.amount)} for \"${fine.bookTitle.orDash()}\" will be marked as paid.")
             .setNegativeButton("Cancel", null)
-            .setPositiveButton("Mark Paid") { _, _ -> viewModel.markFinePaid(fine.resolvedId) }
+            .setPositiveButton("Mark Paid") { _, _ ->
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.markFinePaid(fine.resolvedId) }
+            }
             .show()
     }
 
@@ -599,7 +620,7 @@ class StaffStudentDetailScreen : Fragment() {
                     return@setOnClickListener
                 }
                 dialog.dismiss()
-                viewModel.waiveFine(fine.resolvedId, reason)
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.waiveFine(fine.resolvedId, reason) }
             }
         }
         dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
@@ -611,7 +632,9 @@ class StaffStudentDetailScreen : Fragment() {
             .setTitle("Accept Request?")
             .setMessage("\"${request.displayBookTitle}\" will be accepted for this student.")
             .setNegativeButton("Cancel", null)
-            .setPositiveButton("Accept") { _, _ -> viewModel.approveBookRequest(request.resolvedId) }
+            .setPositiveButton("Accept") { _, _ ->
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.approveBookRequest(request.resolvedId) }
+            }
             .show()
     }
 
@@ -620,7 +643,9 @@ class StaffStudentDetailScreen : Fragment() {
             .setTitle("Reject Request?")
             .setMessage("\"${request.displayBookTitle}\" will be rejected.")
             .setNegativeButton("Cancel", null)
-            .setPositiveButton("Reject") { _, _ -> viewModel.rejectBookRequest(request.resolvedId) }
+            .setPositiveButton("Reject") { _, _ ->
+                runIfOnline(NetworkMessages.OFFLINE_RETRY) { viewModel.rejectBookRequest(request.resolvedId) }
+            }
             .show()
     }
 

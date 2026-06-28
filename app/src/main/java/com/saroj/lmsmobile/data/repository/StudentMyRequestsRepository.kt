@@ -31,6 +31,7 @@ class StudentMyRequestsRepository(
     fun getSummary(): Flow<NetworkResult<MyRequestsSummaryUiModel>> = flow {
         val cached = LocalCacheProvider.cache?.read(CACHE_KEY_SUMMARY, MyRequestsSummaryUiModel::class.java)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getStudentRequestsSummary()
         if (response.isSuccessful) {
             val summary = parseSummary(response.body())
@@ -40,13 +41,14 @@ class StudentMyRequestsRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun getRequests(): Flow<NetworkResult<List<MyRequestUiModel>>> = flow {
         val listType = object : TypeToken<List<MyRequestUiModel>>() {}.type
         val cached = LocalCacheProvider.cache?.read<List<MyRequestUiModel>>(CACHE_KEY_REQUESTS, listType)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getAuthenticatedStudentRequests()
         if (response.isSuccessful) {
             val requests = extractRequestElements(response.body()).mapIndexed { index, element ->
@@ -59,11 +61,12 @@ class StudentMyRequestsRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun getRequestDetail(id: Int): Flow<NetworkResult<MyRequestUiModel>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.getAuthenticatedStudentRequestDetail(id)
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseRequest(extractRequestElement(response.body()), fallbackId = id)))
@@ -71,11 +74,12 @@ class StudentMyRequestsRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun cancelRequest(request: MyRequestUiModel): Flow<NetworkResult<MyRequestActionResult>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.cancelAuthenticatedStudentRequest(request.id)
         if (response.isSuccessful) {
             emit(NetworkResult.Success(parseCancelResult(response.body(), request)))
@@ -83,7 +87,7 @@ class StudentMyRequestsRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun buildSummaryFromRequests(requests: List<MyRequestUiModel>): MyRequestsSummaryUiModel {

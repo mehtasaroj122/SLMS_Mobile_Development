@@ -35,6 +35,7 @@ class StaffProfileRepository(
     fun getProfile(): Flow<NetworkResult<StaffProfileUiModel>> = flow {
         val cached = LocalCacheProvider.cache?.read(CACHE_KEY_PROFILE, StaffProfileUiModel::class.java)
         if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
+        if (stopIfOffline(cached)) return@flow
         val response = apiService.getProfileJson()
         if (response.isSuccessful) {
             val profile = parseProfile(response.body())
@@ -44,11 +45,12 @@ class StaffProfileRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun updateProfile(profile: StaffProfileUiModel): Flow<NetworkResult<StaffProfileUiModel>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.updateProfile(
             ProfileUpdateRequest(
                 name = profile.name,
@@ -74,7 +76,7 @@ class StaffProfileRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun changePassword(
@@ -83,6 +85,7 @@ class StaffProfileRepository(
         confirmPassword: String
     ): Flow<NetworkResult<String>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.changeProfilePassword(
             ChangePasswordRequest(
                 current_password = currentPassword,
@@ -97,7 +100,7 @@ class StaffProfileRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun uploadPhoto(
@@ -105,6 +108,7 @@ class StaffProfileRepository(
         fallback: StaffProfileUiModel?
     ): Flow<NetworkResult<StaffProfileUiModel>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val requestBody = file.asRequestBody(resolveMediaType(file.name).toMediaTypeOrNull())
         val part = MultipartBody.Part.createFormData("photo", file.name, requestBody)
         val response = apiService.uploadProfilePhoto(part)
@@ -117,11 +121,12 @@ class StaffProfileRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun removePhoto(currentProfile: StaffProfileUiModel): Flow<NetworkResult<StaffProfileUiModel>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.removeProfilePhoto()
         if (response.isSuccessful) {
             val updatedProfile = parseProfile(response.body(), fallback = currentProfile.copy(profilePhotoUrl = null))
@@ -131,11 +136,12 @@ class StaffProfileRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun deleteAccount(password: String, confirmation: String): Flow<NetworkResult<String>> = flow {
         emit(NetworkResult.Loading())
+        if (emitOfflineActionError()) return@flow
         val response = apiService.deleteProfileAccount(
             DeleteAccountRequest(
                 current_password = password,
@@ -149,7 +155,7 @@ class StaffProfileRepository(
             emit(handleError(response))
         }
     }.catch { e ->
-        emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
+        emit(NetworkResult.Error(e.toRepositoryMessage()))
     }
 
     fun logout(): Flow<NetworkResult<String>> = flow {

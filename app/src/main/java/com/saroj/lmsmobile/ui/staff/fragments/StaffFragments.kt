@@ -33,6 +33,7 @@ import com.saroj.lmsmobile.data.repository.StaffProfileRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
 import com.saroj.lmsmobile.ui.staff.StaffDashboardActivity
 import com.saroj.lmsmobile.ui.staff.model.StaffProfileUiModel
+import com.saroj.lmsmobile.ui.theme.DarkModeToggleBinder
 import com.saroj.lmsmobile.ui.staff.viewmodel.StaffDashboardViewModel
 import com.saroj.lmsmobile.utils.Constants
 import com.saroj.lmsmobile.utils.LmsToast
@@ -557,6 +558,7 @@ class StaffMoreScreen : Fragment() {
         loadProfile(view)
         loadNotificationBadge(view)
         setupNotificationRefreshObserver(view)
+        DarkModeToggleBinder.bind(view, viewLifecycleOwner, viewLifecycleOwner.lifecycleScope)
 
         val host = activity as? StaffDashboardActivity
         view.findViewById<View>(R.id.rowBookRequests)?.setOnClickListener {

@@ -22,6 +22,7 @@ import com.saroj.lmsmobile.data.repository.StudentProfileRepository
 import com.saroj.lmsmobile.ui.common.UnauthorizedActivity
 import com.saroj.lmsmobile.ui.student.StudentDashboardActivity
 import com.saroj.lmsmobile.ui.student.model.StudentProfileUiModel
+import com.saroj.lmsmobile.ui.theme.DarkModeToggleBinder
 import com.saroj.lmsmobile.utils.Constants
 import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +46,7 @@ class StudentMoreFragment : Fragment() {
         loadProfile(view)
         loadNotificationBadge(view)
         setupNotificationRefreshObserver(view)
+        DarkModeToggleBinder.bind(view, viewLifecycleOwner, viewLifecycleOwner.lifecycleScope)
 
         val host = activity as? StudentDashboardActivity
         view.findViewById<View>(R.id.rowBookRequests)?.setOnClickListener { host?.openMyRequests() }

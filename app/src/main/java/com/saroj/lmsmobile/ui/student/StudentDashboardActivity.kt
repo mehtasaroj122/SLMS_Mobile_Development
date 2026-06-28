@@ -28,6 +28,7 @@ import com.saroj.lmsmobile.ui.student.fragments.StudentProfileFragment
 import com.saroj.lmsmobile.ui.student.fragments.StudentMoreFragment
 import com.saroj.lmsmobile.ui.student.fragments.StudentSearchBooksFragment
 import com.saroj.lmsmobile.ui.student.notifications.StudentNotificationsFragment
+import com.saroj.lmsmobile.ui.theme.DarkModeToggleBinder
 import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import kotlinx.coroutines.launch
 
@@ -222,6 +223,7 @@ class StudentDashboardActivity : BaseActivity() {
         var openedSecondaryScreen = false
         dialog.setContentView(view)
         updateMoreNotificationsBadge(view)
+        DarkModeToggleBinder.bind(view, this, activityScope)
 
         view.findViewById<View>(R.id.rowProfile).setOnClickListener {
             openedSecondaryScreen = true

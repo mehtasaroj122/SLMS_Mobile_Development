@@ -27,6 +27,6 @@
         android:gravity="center"
         android:maxLines="2"
         android:text="Issue Book"
-        android:textColor="#334155"
+        android:textColor="@color/student_text_secondary"
         android:textSize="13sp" />
 </LinearLayout>

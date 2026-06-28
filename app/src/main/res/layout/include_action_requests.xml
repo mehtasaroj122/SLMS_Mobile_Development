@@ -24,6 +24,6 @@
         android:layout_marginTop="7dp"
         android:gravity="center"
         android:text="My Requests"
-        android:textColor="#334155"
+        android:textColor="@color/student_text_secondary"
         android:textSize="13sp" />
 </LinearLayout>

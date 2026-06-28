@@ -1,12 +1,9 @@
 package com.saroj.lmsmobile.storage
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import com.saroj.lmsmobile.data.local.cache.LocalCacheProvider
 import com.saroj.lmsmobile.utils.Constants
 import kotlinx.coroutines.flow.Flow
@@ -28,10 +25,6 @@ import kotlinx.coroutines.flow.firstOrNull
  *   tokenManager.saveToken("Bearer token_here")
  *   tokenManager.getToken().collect { token -> ... }
  */
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "lms_mobile_app_prefs"
-)
-
 class TokenManager(private val context: Context) {
 
     private object PrefsKeys {
@@ -45,7 +38,7 @@ class TokenManager(private val context: Context) {
         val REMEMBERED_EMAIL = stringPreferencesKey("remembered_login_email")
     }
 
-    private val dataStore = context.dataStore
+    private val dataStore = context.applicationContext.lmsDataStore
 
     // ==================== Token Operations ====================
 
@@ -185,7 +178,14 @@ class TokenManager(private val context: Context) {
         }.firstOrNull()
         LocalCacheProvider.cache?.clear()
         dataStore.edit { preferences ->
-            preferences.clear()
+            preferences.remove(PrefsKeys.TOKEN)
+            preferences.remove(PrefsKeys.USER_ID)
+            preferences.remove(PrefsKeys.USER_NAME)
+            preferences.remove(PrefsKeys.USER_EMAIL)
+            preferences.remove(PrefsKeys.USER_ROLE)
+            preferences.remove(PrefsKeys.IS_LOGGED_IN)
+            preferences.remove(PrefsKeys.REMEMBER_ME)
+            preferences.remove(PrefsKeys.REMEMBERED_EMAIL)
             if (remembered?.first == true && !remembered.second.isNullOrBlank()) {
                 preferences[PrefsKeys.REMEMBER_ME] = true
                 preferences[PrefsKeys.REMEMBERED_EMAIL] = remembered.second.orEmpty()

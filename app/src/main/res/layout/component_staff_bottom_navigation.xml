@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_gravity="bottom"
-    android:background="@color/white"
+    android:background="@color/student_card"
     app:elevation="16dp"
     app:itemIconTint="@color/student_bottom_nav_item_color"
     app:itemTextColor="@color/student_bottom_nav_item_color"

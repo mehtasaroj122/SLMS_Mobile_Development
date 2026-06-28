@@ -41,5 +41,5 @@
         android:layout_height="20dp"
         android:contentDescription="Open book requests"
         android:src="@drawable/ic_chevron_right"
-        app:tint="#94A3B8" />
+        app:tint="@color/more_chevron" />
 </LinearLayout>

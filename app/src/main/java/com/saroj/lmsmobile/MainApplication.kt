@@ -4,6 +4,7 @@ import android.app.Application
 import com.saroj.lmsmobile.data.local.LmsDatabase
 import com.saroj.lmsmobile.data.local.cache.LocalCacheProvider
 import com.saroj.lmsmobile.data.local.cache.LocalCacheRepository
+import com.saroj.lmsmobile.storage.ThemePreferenceManager
 import com.saroj.lmsmobile.storage.TokenManager
 
 /**
@@ -36,6 +37,7 @@ class MainApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        ThemePreferenceManager.applySavedThemeBlocking(this)
         val database = LmsDatabase.getInstance(this)
         LocalCacheProvider.initialize(LocalCacheRepository(database.apiCacheDao()))
     }

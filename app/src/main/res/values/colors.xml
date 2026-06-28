@@ -181,6 +181,9 @@
     <color name="more_purple_bg">#EDE9FE</color>
     <color name="more_orange">#F97316</color>
     <color name="more_orange_bg">#FFEDD5</color>
+    <color name="more_dark_mode">#475569</color>
+    <color name="more_dark_mode_bg">#E2E8F0</color>
+    <color name="more_chevron">#94A3B8</color>
     <color name="more_red">#EF4444</color>
     <color name="more_red_bg">#FEE2E2</color>
 

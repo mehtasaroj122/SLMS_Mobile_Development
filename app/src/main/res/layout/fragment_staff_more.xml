@@ -40,6 +40,8 @@
             android:id="@+id/rowNotifications"
             layout="@layout/item_staff_more_notifications" />
 
+        <include layout="@layout/item_staff_more_dark_mode" />
+
         <include
             android:id="@+id/rowLogout"
             layout="@layout/item_staff_more_logout" />

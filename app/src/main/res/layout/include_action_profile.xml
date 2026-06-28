@@ -16,7 +16,7 @@
         android:layout_height="30dp"
         android:contentDescription="@null"
         android:src="@drawable/ic_user"
-        app:tint="#334155" />
+        app:tint="@color/student_text_secondary" />
 
     <TextView
         android:layout_width="match_parent"
@@ -24,6 +24,6 @@
         android:layout_marginTop="7dp"
         android:gravity="center"
         android:text="My Profile"
-        android:textColor="#334155"
+        android:textColor="@color/student_text_secondary"
         android:textSize="13sp" />
 </LinearLayout>

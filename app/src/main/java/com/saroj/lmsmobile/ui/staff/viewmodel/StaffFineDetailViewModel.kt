@@ -44,6 +44,7 @@ class StaffFineDetailViewModel(
     val unauthorized: LiveData<Boolean> = _unauthorized
 
     private var currentStudentId: Int = 0
+    private var detailsLoaded = false
 
     fun loadStudentFineDetails(studentId: Int) {
         currentStudentId = studentId
@@ -56,6 +57,7 @@ class StaffFineDetailViewModel(
                     }
                     is NetworkResult.Success -> {
                         _isLoading.value = false
+                        detailsLoaded = true
                         val data = result.data.data
                         _student.value = data?.student
                         _summary.value = data?.summary
@@ -63,7 +65,9 @@ class StaffFineDetailViewModel(
                     }
                     is NetworkResult.Error -> {
                         _isLoading.value = false
-                        _errorMessage.value = result.message
+                        if (!detailsLoaded) {
+                            _errorMessage.value = result.message
+                        }
                     }
                     is NetworkResult.Unauthorized -> {
                         _isLoading.value = false

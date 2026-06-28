@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.saroj.lmsmobile.api.ApiService
+import com.saroj.lmsmobile.data.local.cache.LocalCacheProvider
 import com.saroj.lmsmobile.data.models.common.ErrorResponse
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.models.profile.ChangePasswordRequest
@@ -32,10 +33,13 @@ class StudentProfileRepository(
     private val gson = Gson()
 
     fun getProfile(): Flow<NetworkResult<StudentProfileUiModel>> = flow {
-        emit(NetworkResult.Loading())
+        val cached = LocalCacheProvider.cache?.read(CACHE_KEY_PROFILE, StudentProfileUiModel::class.java)
+        if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
         val response = apiService.getProfileJson()
         if (response.isSuccessful) {
-            emit(NetworkResult.Success(parseProfile(response.body())))
+            val profile = parseProfile(response.body())
+            LocalCacheProvider.cache?.write(CACHE_KEY_PROFILE, profile)
+            emit(NetworkResult.Success(profile))
         } else {
             emit(handleError(response))
         }
@@ -64,6 +68,7 @@ class StudentProfileRepository(
                 userEmail = updatedProfile.email,
                 userRole = updatedProfile.role.lowercase(Locale.US)
             )
+            LocalCacheProvider.cache?.write(CACHE_KEY_PROFILE, updatedProfile)
             emit(NetworkResult.Success(updatedProfile))
         } else {
             emit(handleError(response))
@@ -117,7 +122,9 @@ class StudentProfileRepository(
         val response = apiService.uploadProfilePhoto(part)
 
         if (response.isSuccessful) {
-            emit(NetworkResult.Success(parseProfile(response.body(), fallback = fallback)))
+            val updatedProfile = parseProfile(response.body(), fallback = fallback)
+            LocalCacheProvider.cache?.write(CACHE_KEY_PROFILE, updatedProfile)
+            emit(NetworkResult.Success(updatedProfile))
         } else {
             emit(handleError(response))
         }
@@ -129,7 +136,9 @@ class StudentProfileRepository(
         emit(NetworkResult.Loading())
         val response = apiService.removeProfilePhoto()
         if (response.isSuccessful) {
-            emit(NetworkResult.Success(parseProfile(response.body(), fallback = currentProfile.copy(profilePhotoUrl = null))))
+            val updatedProfile = parseProfile(response.body(), fallback = currentProfile.copy(profilePhotoUrl = null))
+            LocalCacheProvider.cache?.write(CACHE_KEY_PROFILE, updatedProfile)
+            emit(NetworkResult.Success(updatedProfile))
         } else {
             emit(handleError(response))
         }
@@ -437,5 +446,9 @@ class StudentProfileRepository(
                 null
             }
         }.orEmpty()
+    }
+
+    private companion object {
+        const val CACHE_KEY_PROFILE = "student:profile"
     }
 }

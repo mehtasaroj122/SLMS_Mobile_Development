@@ -75,7 +75,18 @@ class StudentMyFinesViewModel(
                         publishSummaryFromCache()
                         publishFilteredFines(tabFines)
                     }
-                    is NetworkResult.Error -> _finesState.value = NetworkResult.Error(result.message, result.code)
+                    is NetworkResult.Error -> {
+                        val cachedTabFines = tabCache[tab]
+                        if (cachedTabFines != null) {
+                            publishFilteredFines(cachedTabFines)
+                            _summaryState.value = NetworkResult.Error(
+                                "Offline: showing saved fines data.",
+                                result.code
+                            )
+                        } else {
+                            _finesState.value = NetworkResult.Error(result.message, result.code)
+                        }
+                    }
                     is NetworkResult.Unauthorized -> _finesState.value = NetworkResult.Unauthorized()
                 }
             }
@@ -115,6 +126,16 @@ class StudentMyFinesViewModel(
                     is NetworkResult.Success -> {
                         serverSummary = result.data
                         publishSummary(result.data)
+                    }
+                    is NetworkResult.Error -> {
+                        if (serverSummary != null || tabCache.isNotEmpty()) {
+                            _summaryState.value = NetworkResult.Error(
+                                "Offline: showing saved fines data.",
+                                result.code
+                            )
+                        } else {
+                            _summaryState.value = result
+                        }
                     }
                     else -> _summaryState.value = result
                 }

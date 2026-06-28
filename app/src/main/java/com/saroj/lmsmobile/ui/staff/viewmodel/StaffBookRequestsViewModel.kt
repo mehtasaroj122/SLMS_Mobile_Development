@@ -45,6 +45,7 @@ class StaffBookRequestsViewModel(
     private val loadedRequests = mutableListOf<StaffBookRequestUiModel>()
     private var currentPage = 1
     private var lastPage = 1
+    private var summaryLoaded = false
 
     fun loadInitial() {
         loadSummary()
@@ -103,7 +104,11 @@ class StaffBookRequestsViewModel(
                         _isLoadingMore.value = false
                     }
                     is NetworkResult.Error -> {
-                        _requestsState.value = NetworkResult.Error(result.message, result.code)
+                        if (loadedRequests.isNotEmpty()) {
+                            _requestsState.value = NetworkResult.Success(loadedRequests.toList())
+                        } else {
+                            _requestsState.value = NetworkResult.Error(result.message, result.code)
+                        }
                         _isLoadingMore.value = false
                     }
                     is NetworkResult.Unauthorized -> {
@@ -144,7 +149,23 @@ class StaffBookRequestsViewModel(
     private fun loadSummary() {
         viewModelScope.launch {
             repository.getSummary().collect { result ->
-                _summaryState.value = result
+                when (result) {
+                    is NetworkResult.Success -> {
+                        summaryLoaded = true
+                        _summaryState.value = result
+                    }
+                    is NetworkResult.Error -> {
+                        if (summaryLoaded) {
+                            _summaryState.value = NetworkResult.Error(
+                                "Offline: showing saved request summary.",
+                                result.code
+                            )
+                        } else {
+                            _summaryState.value = result
+                        }
+                    }
+                    else -> _summaryState.value = result
+                }
             }
         }
     }
@@ -170,8 +191,12 @@ class StaffBookRequestsViewModel(
                     }
                     is NetworkResult.Error -> {
                         _isSearching.value = false
-                        if (!append) loadedRequests.clear()
-                        _requestsState.value = NetworkResult.Error(result.message, result.code)
+                        if (loadedRequests.isNotEmpty()) {
+                            _requestsState.value = NetworkResult.Success(loadedRequests.toList())
+                        } else {
+                            if (!append) loadedRequests.clear()
+                            _requestsState.value = NetworkResult.Error(result.message, result.code)
+                        }
                     }
                     is NetworkResult.Unauthorized -> {
                         _isSearching.value = false

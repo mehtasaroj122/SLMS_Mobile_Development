@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.saroj.lmsmobile.data.local.cache.LocalCacheProvider
 import com.saroj.lmsmobile.utils.Constants
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -40,6 +41,8 @@ class TokenManager(private val context: Context) {
         val USER_EMAIL = stringPreferencesKey(Constants.USER_EMAIL_KEY)
         val USER_ROLE = stringPreferencesKey(Constants.USER_ROLE_KEY)
         val IS_LOGGED_IN = booleanPreferencesKey(Constants.IS_LOGGED_IN_KEY)
+        val REMEMBER_ME = booleanPreferencesKey("remember_me_enabled")
+        val REMEMBERED_EMAIL = stringPreferencesKey("remembered_login_email")
     }
 
     private val dataStore = context.dataStore
@@ -135,6 +138,28 @@ class TokenManager(private val context: Context) {
         preferences[PrefsKeys.IS_LOGGED_IN] ?: false
     }
 
+    fun isRememberMeEnabled(): Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[PrefsKeys.REMEMBER_ME] ?: false
+    }
+
+    fun getRememberedEmail(): Flow<String?> = dataStore.data.map { preferences ->
+        preferences[PrefsKeys.REMEMBERED_EMAIL]
+    }
+
+    suspend fun saveRememberedLogin(email: String) {
+        dataStore.edit { preferences ->
+            preferences[PrefsKeys.REMEMBER_ME] = true
+            preferences[PrefsKeys.REMEMBERED_EMAIL] = email
+        }
+    }
+
+    suspend fun clearRememberedLogin() {
+        dataStore.edit { preferences ->
+            preferences[PrefsKeys.REMEMBER_ME] = false
+            preferences.remove(PrefsKeys.REMEMBERED_EMAIL)
+        }
+    }
+
     /**
      * Retrieves user role synchronously (suspend).
      * Use in navigation logic after login.
@@ -152,8 +177,19 @@ class TokenManager(private val context: Context) {
      * Called when user logs out or token expires.
      */
     suspend fun clearAllData() {
+        val remembered = dataStore.data.map { preferences ->
+            Pair(
+                preferences[PrefsKeys.REMEMBER_ME] ?: false,
+                preferences[PrefsKeys.REMEMBERED_EMAIL]
+            )
+        }.firstOrNull()
+        LocalCacheProvider.cache?.clear()
         dataStore.edit { preferences ->
             preferences.clear()
+            if (remembered?.first == true && !remembered.second.isNullOrBlank()) {
+                preferences[PrefsKeys.REMEMBER_ME] = true
+                preferences[PrefsKeys.REMEMBERED_EMAIL] = remembered.second.orEmpty()
+            }
         }
     }
 

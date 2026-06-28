@@ -4,6 +4,8 @@ import com.saroj.lmsmobile.api.ApiService
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
+import com.google.gson.reflect.TypeToken
+import com.saroj.lmsmobile.data.local.cache.LocalCacheProvider
 import com.saroj.lmsmobile.data.models.common.ErrorResponse
 import com.saroj.lmsmobile.data.models.book.Book
 import com.saroj.lmsmobile.data.models.book.BookRequestModel
@@ -38,9 +40,12 @@ class BookRepository(
         sort: String? = null,
         pageSize: Int = 20
     ): Flow<NetworkResult<PaginatedResponse<Book>>> = flow {
-        emit(NetworkResult.Loading())
+        val cacheKey = "books:list:page=$page:category=${category.orEmpty()}:availability=${availability.orEmpty()}:condition=${condition.orEmpty()}:sort=${sort.orEmpty()}:size=$pageSize"
+        val type = object : TypeToken<PaginatedResponse<Book>>() {}.type
+        val cached = LocalCacheProvider.cache?.read<PaginatedResponse<Book>>(cacheKey, type)
+        if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
         val response = apiService.getBooksJson(page, category, availability, condition, pageSize)
-        handleBookListResponse(response, page, pageSize).collect { emit(it) }
+        handleBookListResponse(response, page, pageSize, cacheKey).collect { emit(it) }
     }.catch { e ->
         emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
     }
@@ -49,12 +54,15 @@ class BookRepository(
      * Get book details by ID.
      */
     fun getBookDetail(id: Int): Flow<NetworkResult<Book>> = flow {
-        emit(NetworkResult.Loading())
+        val cacheKey = "books:detail:$id"
+        val cached = LocalCacheProvider.cache?.read(cacheKey, Book::class.java)
+        if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
         try {
             val response = apiService.getBookDetail(id)
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {
+                    LocalCacheProvider.cache?.write(cacheKey, body)
                     emit(NetworkResult.Success(body))
                 } else {
                     emit(NetworkResult.Error("Book not found", response.code()))
@@ -81,10 +89,13 @@ class BookRepository(
         sort: String? = null,
         pageSize: Int = 20
     ): Flow<NetworkResult<PaginatedResponse<Book>>> = flow {
-        emit(NetworkResult.Loading())
+        val cacheKey = "books:search:q=$query:page=$page:category=${category.orEmpty()}:availability=${availability.orEmpty()}:condition=${condition.orEmpty()}:sort=${sort.orEmpty()}:size=$pageSize"
+        val type = object : TypeToken<PaginatedResponse<Book>>() {}.type
+        val cached = LocalCacheProvider.cache?.read<PaginatedResponse<Book>>(cacheKey, type)
+        if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
         try {
             val response = apiService.searchBooksJson(query, page, category, availability, condition, pageSize)
-            handleBookListResponse(response, page, pageSize).collect { emit(it) }
+            handleBookListResponse(response, page, pageSize, cacheKey).collect { emit(it) }
         } catch (e: Exception) {
             emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
         }
@@ -96,10 +107,13 @@ class BookRepository(
      * Get available books.
      */
     fun getAvailableBooks(page: Int = 1, pageSize: Int = 20): Flow<NetworkResult<PaginatedResponse<Book>>> = flow {
-        emit(NetworkResult.Loading())
+        val cacheKey = "books:available:page=$page:size=$pageSize"
+        val type = object : TypeToken<PaginatedResponse<Book>>() {}.type
+        val cached = LocalCacheProvider.cache?.read<PaginatedResponse<Book>>(cacheKey, type)
+        if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
         try {
             val response = apiService.getAvailableBooks(page, pageSize)
-            handlePaginatedResponse(response).collect { emit(it) }
+            handlePaginatedResponse(response, cacheKey).collect { emit(it) }
         } catch (e: Exception) {
             emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
         }
@@ -130,9 +144,12 @@ class BookRepository(
      * Get authenticated student's requests for deriving book button state.
      */
     fun getStudentBookRequests(page: Int = 1): Flow<NetworkResult<PaginatedResponse<BookRequestModel>>> = flow {
-        emit(NetworkResult.Loading())
+        val cacheKey = "student:book-requests:page=$page"
+        val type = object : TypeToken<PaginatedResponse<BookRequestModel>>() {}.type
+        val cached = LocalCacheProvider.cache?.read<PaginatedResponse<BookRequestModel>>(cacheKey, type)
+        if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
         val response = apiService.getStudentBookRequests(page)
-        handlePaginatedResponse(response).collect { emit(it) }
+        handlePaginatedResponse(response, cacheKey).collect { emit(it) }
     }.catch { e ->
         emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
     }
@@ -140,10 +157,14 @@ class BookRepository(
     /**
      * Helper to handle paginated responses.
      */
-    private fun <T> handlePaginatedResponse(response: Response<PaginatedResponse<T>>): Flow<NetworkResult<PaginatedResponse<T>>> = flow {
+    private fun <T> handlePaginatedResponse(
+        response: Response<PaginatedResponse<T>>,
+        cacheKey: String? = null
+    ): Flow<NetworkResult<PaginatedResponse<T>>> = flow {
         if (response.isSuccessful) {
             val body = response.body()
             if (body != null) {
+                cacheKey?.let { LocalCacheProvider.cache?.write(it, body) }
                 emit(NetworkResult.Success(body))
             } else {
                 emit(NetworkResult.Error("Empty response", response.code()))
@@ -164,12 +185,15 @@ class BookRepository(
     private fun handleBookListResponse(
         response: Response<JsonElement>,
         fallbackPage: Int,
-        pageSize: Int
+        pageSize: Int,
+        cacheKey: String? = null
     ): Flow<NetworkResult<PaginatedResponse<Book>>> = flow {
         if (response.isSuccessful) {
             val body = response.body()
             if (body != null) {
-                emit(NetworkResult.Success(parseBooksResponse(body, fallbackPage, pageSize)))
+                val parsed = parseBooksResponse(body, fallbackPage, pageSize)
+                cacheKey?.let { LocalCacheProvider.cache?.write(it, parsed) }
+                emit(NetworkResult.Success(parsed))
             } else {
                 emit(NetworkResult.Error("Empty response", response.code()))
             }

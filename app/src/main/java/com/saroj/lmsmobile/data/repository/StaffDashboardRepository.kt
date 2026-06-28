@@ -3,6 +3,7 @@ package com.saroj.lmsmobile.data.repository
 import android.util.Log
 import com.google.gson.Gson
 import com.saroj.lmsmobile.api.ApiService
+import com.saroj.lmsmobile.data.local.cache.LocalCacheProvider
 import com.saroj.lmsmobile.data.models.common.ErrorResponse
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.models.staffdashboard.RejectBookRequestBody
@@ -21,12 +22,18 @@ class StaffDashboardRepository(
     private val gson = Gson()
 
     fun getStaffDashboard(): Flow<NetworkResult<StaffDashboardData>> = flow {
-        emit(NetworkResult.Loading())
+        val cached = LocalCacheProvider.cache?.read(CACHE_KEY_STAFF_DASHBOARD, StaffDashboardData::class.java)
+        if (cached != null) {
+            emit(NetworkResult.Success(cached))
+        } else {
+            emit(NetworkResult.Loading())
+        }
 
         val response = apiService.getStaffDashboard()
         if (response.isSuccessful) {
             val dashboard = response.body()?.data
             if (dashboard != null) {
+                LocalCacheProvider.cache?.write(CACHE_KEY_STAFF_DASHBOARD, dashboard)
                 emit(NetworkResult.Success(dashboard))
             } else {
                 emit(NetworkResult.Error("Dashboard data was missing from server response", response.code()))
@@ -101,4 +108,8 @@ class StaffDashboardRepository(
     }
 
     private fun String?.orNullOrBlank(): String? = if (isNullOrBlank()) null else this
+
+    private companion object {
+        const val CACHE_KEY_STAFF_DASHBOARD = "staff:dashboard"
+    }
 }

@@ -3,6 +3,7 @@ package com.saroj.lmsmobile.ui.staff
 import android.os.Bundle
 import android.view.Menu
 import android.view.View
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
@@ -12,6 +13,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.saroj.lmsmobile.R
+import com.saroj.lmsmobile.api.RetrofitClient
+import com.saroj.lmsmobile.data.models.common.NetworkResult
+import com.saroj.lmsmobile.data.repository.NotificationRepository
 import com.saroj.lmsmobile.ui.components.BaseActivity
 import com.saroj.lmsmobile.ui.staff.fragments.StaffBookRequestsScreen
 import com.saroj.lmsmobile.ui.staff.fragments.StaffDashboardScreen
@@ -24,6 +28,8 @@ import com.saroj.lmsmobile.ui.staff.fragments.StaffProfileScreen
 import com.saroj.lmsmobile.ui.staff.fragments.StaffReturnBookScreen
 import com.saroj.lmsmobile.ui.staff.fragments.StaffStudentDetailScreen
 import com.saroj.lmsmobile.ui.staff.fragments.StaffStudentsScreen
+import com.saroj.lmsmobile.utils.NotificationRefreshBus
+import kotlinx.coroutines.launch
 
 /**
  * StaffDashboardActivity is the main activity for staff users.
@@ -56,10 +62,14 @@ class StaffDashboardActivity : BaseActivity() {
         // Initialize views
         initializeViews()
         setupStaffHeader()
+        setupHeaderNotifications()
 
         // Set up navigation
         setupBottomNavigation()
         setupBackStackNavigation()
+        if (savedInstanceState != null) {
+            markBottomNavItemChecked(lastSelectedNavItemId)
+        }
 
         // Load default fragment
         if (savedInstanceState == null) {
@@ -119,6 +129,40 @@ class StaffDashboardActivity : BaseActivity() {
 
         ViewCompat.requestApplyInsets(header)
         ViewCompat.requestApplyInsets(bottomNavigation)
+    }
+
+    private fun setupHeaderNotifications() {
+        findViewById<View>(R.id.buttonHeaderNotifications)?.setOnClickListener {
+            openNotifications()
+        }
+        loadHeaderNotificationCount()
+        activityScope.launch {
+            NotificationRefreshBus.events.collect {
+                loadHeaderNotificationCount()
+            }
+        }
+    }
+
+    private fun loadHeaderNotificationCount() {
+        val apiService = RetrofitClient.getApiService(tokenManager)
+        val repository = NotificationRepository(apiService, tokenManager)
+        activityScope.launch {
+            repository.getNotificationCount().collect { result ->
+                when (result) {
+                    is NetworkResult.Success -> updateHeaderNotificationBadge(result.data.unreadCount ?: 0)
+                    is NetworkResult.Error,
+                    is NetworkResult.Unauthorized -> updateHeaderNotificationBadge(0)
+                    is NetworkResult.Loading -> Unit
+                }
+            }
+        }
+    }
+
+    private fun updateHeaderNotificationBadge(unreadCount: Int) {
+        findViewById<TextView>(R.id.textHeaderNotificationBadge)?.apply {
+            text = if (unreadCount > 99) "99+" else unreadCount.toString()
+            visibility = if (unreadCount > 0) View.VISIBLE else View.GONE
+        }
     }
 
     /**

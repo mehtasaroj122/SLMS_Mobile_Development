@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.saroj.lmsmobile.api.ApiService
+import com.saroj.lmsmobile.data.local.cache.LocalCacheProvider
 import com.saroj.lmsmobile.data.models.common.ErrorResponse
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.models.fine.WaiveFineRequest
@@ -36,8 +37,14 @@ class StaffStudentsRepository(
     private val gson = Gson()
 
     fun getStudents(status: String, search: String): Flow<NetworkResult<StaffStudentsResponse>> = flow {
-        emit(NetworkResult.Loading())
         val query = search.trim().takeIf { it.isNotBlank() }
+        val cacheKey = "staff:students:list:status=$status:query=${query.orEmpty()}"
+        val cached = LocalCacheProvider.cache?.read(cacheKey, StaffStudentsResponse::class.java)
+        if (cached != null) {
+            emit(NetworkResult.Success(cached))
+        } else {
+            emit(NetworkResult.Loading())
+        }
         val response = apiService.getStaffStudents(
             status = status,
             search = query,
@@ -49,7 +56,9 @@ class StaffStudentsRepository(
             }.let { list ->
                 if (status == "all") list else list.filter { it.normalizedStatus == status }
             }
-            emit(NetworkResult.Success(StaffStudentsResponse(message = messageOf(response.body()), data = students)))
+            val result = StaffStudentsResponse(message = messageOf(response.body()), data = students)
+            LocalCacheProvider.cache?.write(cacheKey, result)
+            emit(NetworkResult.Success(result))
         } else {
             emit(handleError(response))
         }
@@ -58,21 +67,25 @@ class StaffStudentsRepository(
     }
 
     fun getStudentDetails(studentId: Int): Flow<NetworkResult<StaffStudentDetailResponse>> = flow {
-        emit(NetworkResult.Loading())
+        val cacheKey = "staff:students:detail:$studentId"
+        val cached = LocalCacheProvider.cache?.read(cacheKey, StaffStudentDetailResponse::class.java)
+        if (cached != null) {
+            emit(NetworkResult.Success(cached))
+        } else {
+            emit(NetworkResult.Loading())
+        }
         val response = apiService.getStaffIssueStudentDetail(studentId)
         if (response.isSuccessful) {
             val root = response.body()
             val data = root.dataElement()
             val studentElement = data.asObjectOrNull()?.get("student") ?: data ?: root
             val student = parseStudent(studentElement, fallbackId = studentId)
-            emit(
-                NetworkResult.Success(
-                    StaffStudentDetailResponse(
-                        message = messageOf(root),
-                        data = StaffStudentDetailData(student)
-                    )
-                )
+            val result = StaffStudentDetailResponse(
+                message = messageOf(root),
+                data = StaffStudentDetailData(student)
             )
+            LocalCacheProvider.cache?.write(cacheKey, result)
+            emit(NetworkResult.Success(result))
         } else {
             emit(handleError(response))
         }
@@ -81,13 +94,21 @@ class StaffStudentsRepository(
     }
 
     fun getIssuedBooks(studentId: Int): Flow<NetworkResult<StudentIssuedBooksResponse>> = flow {
-        emit(NetworkResult.Loading())
+        val cacheKey = "staff:students:issued:$studentId"
+        val cached = LocalCacheProvider.cache?.read(cacheKey, StudentIssuedBooksResponse::class.java)
+        if (cached != null) {
+            emit(NetworkResult.Success(cached))
+        } else {
+            emit(NetworkResult.Loading())
+        }
         val response = apiService.getStaffStudentIssuedBooks(studentId)
         if (response.isSuccessful) {
             val books = extractArray(response.body()).mapIndexed { index, element ->
                 parseIssuedBook(element, fallbackId = index + 1)
             }
-            emit(NetworkResult.Success(StudentIssuedBooksResponse(message = messageOf(response.body()), data = books)))
+            val result = StudentIssuedBooksResponse(message = messageOf(response.body()), data = books)
+            LocalCacheProvider.cache?.write(cacheKey, result)
+            emit(NetworkResult.Success(result))
         } else {
             emit(handleError(response))
         }
@@ -96,7 +117,13 @@ class StaffStudentsRepository(
     }
 
     fun getStudentFines(studentId: Int): Flow<NetworkResult<StudentFinesResponse>> = flow {
-        emit(NetworkResult.Loading())
+        val cacheKey = "staff:students:fines:$studentId"
+        val cached = LocalCacheProvider.cache?.read(cacheKey, StudentFinesResponse::class.java)
+        if (cached != null) {
+            emit(NetworkResult.Success(cached))
+        } else {
+            emit(NetworkResult.Loading())
+        }
         val response = apiService.getStudentFineDetails(studentId)
         if (response.isSuccessful) {
             val body = response.body()
@@ -143,10 +170,13 @@ class StaffStudentsRepository(
                     waiveReason = it.waiveReason,
                     paidAt = it.paidAt,
                     paidDate = it.paidDate,
-                    waivedAt = it.waivedAt
+                    waivedAt = it.waivedAt,
+                    coverImageUrl = it.displayCover
                 )
             }
-            emit(NetworkResult.Success(StudentFinesResponse(message = body?.message, data = StudentFinesData(student, summary, fines))))
+            val result = StudentFinesResponse(message = body?.message, data = StudentFinesData(student, summary, fines))
+            LocalCacheProvider.cache?.write(cacheKey, result)
+            emit(NetworkResult.Success(result))
         } else {
             emit(handleError(response))
         }
@@ -155,13 +185,21 @@ class StaffStudentsRepository(
     }
 
     fun getStudentBookRequests(studentId: Int): Flow<NetworkResult<StudentBookRequestsResponse>> = flow {
-        emit(NetworkResult.Loading())
+        val cacheKey = "staff:students:requests:$studentId"
+        val cached = LocalCacheProvider.cache?.read(cacheKey, StudentBookRequestsResponse::class.java)
+        if (cached != null) {
+            emit(NetworkResult.Success(cached))
+        } else {
+            emit(NetworkResult.Loading())
+        }
         val response = apiService.getStaffStudentBookRequests(studentId)
         if (response.isSuccessful) {
             val requests = extractArray(response.body()).mapIndexed { index, element ->
                 parseBookRequest(element, fallbackId = index + 1)
             }
-            emit(NetworkResult.Success(StudentBookRequestsResponse(message = messageOf(response.body()), data = requests)))
+            val result = StudentBookRequestsResponse(message = messageOf(response.body()), data = requests)
+            LocalCacheProvider.cache?.write(cacheKey, result)
+            emit(NetworkResult.Success(result))
         } else {
             emit(handleError(response))
         }
@@ -272,7 +310,8 @@ class StaffStudentsRepository(
             dueDate = issue.stringValue("due_date"),
             returnDate = issue.stringValue("return_date", "returned_at"),
             status = issue.stringValue("status", "issue_status"),
-            fineAmount = issue.doubleValueOrNull("fine_amount") ?: fine.doubleValueOrNull("amount") ?: 0.0
+            fineAmount = issue.doubleValueOrNull("fine_amount") ?: fine.doubleValueOrNull("amount") ?: 0.0,
+            coverImageUrl = coverUrl(book, issue)
         )
     }
 
@@ -286,7 +325,8 @@ class StaffStudentsRepository(
             book = RequestBookInfo(
                 id = book.intValueOrNull("id"),
                 title = book.stringValue("title", "book_title"),
-                author = book.stringValue("author", "book_author")
+                author = book.stringValue("author", "book_author"),
+                coverImageUrl = coverUrl(book, request)
             ),
             bookTitle = request.stringValue("book_title", "title"),
             author = request.stringValue("author", "book_author"),
@@ -296,9 +336,20 @@ class StaffStudentsRepository(
             status = request.stringValue("status", "request_status"),
             message = request.stringValue("message", "remarks", "reason"),
             processedBy = processedBy.stringValue("name") ?: request.stringValue("processed_by", "processed_by_name"),
-            processedAt = request.stringValue("processed_at", "processed_date")
+            processedAt = request.stringValue("processed_at", "processed_date"),
+            coverImageUrl = coverUrl(book, request)
         )
     }
+
+    private fun coverUrl(book: JsonObject, fallback: JsonObject): String? =
+        book.stringValue(
+            "cover_image",
+            "cover_image_url",
+            "cover_url",
+            "image_url",
+            "thumbnail_url",
+            "cover"
+        ) ?: fallback.stringValue("cover_image", "cover_image_url", "cover_url", "image_url", "thumbnail_url", "cover")
 
     private fun extractArray(root: JsonElement?): List<JsonElement> {
         if (root == null || root.isJsonNull) return emptyList()

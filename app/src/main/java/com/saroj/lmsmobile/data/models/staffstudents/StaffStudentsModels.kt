@@ -92,7 +92,9 @@ data class StudentIssuedBookItem(
     val returnDate: String? = null,
     val status: String? = null,
     @SerializedName("fine_amount")
-    val fineAmount: Double = 0.0
+    val fineAmount: Double = 0.0,
+    @SerializedName("cover_image_url")
+    val coverImageUrl: String? = null
 ) : Serializable {
     val displayTitle: String
         get() = title?.takeIf { it.isNotBlank() } ?: bookTitle?.takeIf { it.isNotBlank() } ?: "Untitled Book"
@@ -155,7 +157,9 @@ data class StudentFineItem(
     @SerializedName("paid_date")
     val paidDate: String? = null,
     @SerializedName("waived_at")
-    val waivedAt: String? = null
+    val waivedAt: String? = null,
+    @SerializedName("cover_image_url")
+    val coverImageUrl: String? = null
 ) : Serializable {
     val resolvedId: Int
         get() = fineId ?: id
@@ -197,7 +201,9 @@ data class StudentBookRequestItem(
     @SerializedName("processed_at")
     val processedAt: String? = null,
     @SerializedName("processed_date")
-    val processedDate: String? = null
+    val processedDate: String? = null,
+    @SerializedName("cover_image_url")
+    val coverImageUrl: String? = null
 ) : Serializable {
     val resolvedId: Int
         get() = requestId ?: id
@@ -223,7 +229,9 @@ data class StudentBookRequestItem(
 data class RequestBookInfo(
     val id: Int? = null,
     val title: String? = null,
-    val author: String? = null
+    val author: String? = null,
+    @SerializedName("cover_image_url")
+    val coverImageUrl: String? = null
 ) : Serializable
 
 data class StaffStudentActionResponse(

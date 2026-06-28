@@ -62,6 +62,11 @@ dependencies {
     // DataStore
     implementation(libs.datastore.preferences)
 
+    // Room local cache
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    annotationProcessor(libs.room.compiler)
+
     // UI Components
     implementation(libs.recyclerview)
     implementation(libs.cardview)

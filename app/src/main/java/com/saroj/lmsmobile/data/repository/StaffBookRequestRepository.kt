@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.saroj.lmsmobile.api.ApiService
+import com.saroj.lmsmobile.data.local.cache.LocalCacheProvider
 import com.saroj.lmsmobile.data.models.common.ErrorResponse
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.storage.TokenManager
@@ -28,10 +29,13 @@ class StaffBookRequestRepository(
     private val gson = Gson()
 
     fun getSummary(): Flow<NetworkResult<StaffBookRequestsSummaryUiModel>> = flow {
-        emit(NetworkResult.Loading())
+        val cached = LocalCacheProvider.cache?.read(CACHE_KEY_SUMMARY, StaffBookRequestsSummaryUiModel::class.java)
+        if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
         val response = apiService.getStaffBookRequestSummary()
         if (response.isSuccessful) {
-            emit(NetworkResult.Success(parseSummary(response.body())))
+            val summary = parseSummary(response.body())
+            LocalCacheProvider.cache?.write(CACHE_KEY_SUMMARY, summary)
+            emit(NetworkResult.Success(summary))
         } else {
             emit(handleError(response))
         }
@@ -45,8 +49,10 @@ class StaffBookRequestRepository(
         page: Int = 1,
         pageSize: Int = PAGE_SIZE
     ): Flow<NetworkResult<StaffBookRequestsPageUiModel>> = flow {
-        emit(NetworkResult.Loading())
         val normalizedSearch = search.trim().takeIf { it.isNotBlank() }
+        val cacheKey = "staff:book-requests:status=$status:search=${normalizedSearch.orEmpty()}:page=$page:size=$pageSize"
+        val cached = LocalCacheProvider.cache?.read(cacheKey, StaffBookRequestsPageUiModel::class.java)
+        if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
         val response = apiService.getStaffBookRequests(
             status = status,
             search = normalizedSearch,
@@ -57,7 +63,9 @@ class StaffBookRequestRepository(
             val requests = extractRequestElements(response.body()).mapIndexed { index, element ->
                 parseRequest(element, fallbackId = index + 1)
             }.sortedByDescending { it.sortDateMillis }
-            emit(NetworkResult.Success(parseRequestsPage(response.body(), requests, page)))
+            val pageResult = parseRequestsPage(response.body(), requests, page)
+            LocalCacheProvider.cache?.write(cacheKey, pageResult)
+            emit(NetworkResult.Success(pageResult))
         } else {
             emit(handleError(response))
         }
@@ -327,5 +335,6 @@ class StaffBookRequestRepository(
 
     private companion object {
         const val PAGE_SIZE = 20
+        const val CACHE_KEY_SUMMARY = "staff:book-requests:summary"
     }
 }

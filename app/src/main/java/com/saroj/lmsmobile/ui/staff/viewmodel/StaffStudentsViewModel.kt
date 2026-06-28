@@ -44,6 +44,7 @@ class StaffStudentsViewModel(
 
     private var searchJob: Job? = null
     private var loadedOnce = false
+    private var studentsLoaded = false
 
     fun loadStudents() {
         loadStudentsInternal(
@@ -93,13 +94,19 @@ class StaffStudentsViewModel(
                     is NetworkResult.Success -> {
                         _isLoading.value = false
                         _isSearching.value = false
+                        _errorMessage.value = null
+                        studentsLoaded = true
                         _students.value = result.data.data
                     }
                     is NetworkResult.Error -> {
                         _isLoading.value = false
                         _isSearching.value = false
-                        _students.value = emptyList()
-                        _errorMessage.value = result.message
+                        if (studentsLoaded) {
+                            _errorMessage.value = null
+                        } else {
+                            _students.value = emptyList()
+                            _errorMessage.value = result.message
+                        }
                     }
                     is NetworkResult.Unauthorized -> {
                         _isLoading.value = false

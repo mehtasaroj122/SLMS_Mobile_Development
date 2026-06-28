@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/studentPortalHeader"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -56,4 +57,41 @@
             android:textColor="@color/student_portal_header_subtitle"
             android:textSize="12sp" />
     </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/buttonHeaderNotifications"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_marginStart="12dp"
+        android:background="@drawable/bg_bell_container"
+        android:clickable="true"
+        android:contentDescription="Notifications"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_gravity="center"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_bell"
+            app:tint="@color/white" />
+
+        <TextView
+            android:id="@+id/textHeaderNotificationBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="20dp"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="2dp"
+            android:layout_marginEnd="2dp"
+            android:background="@drawable/bg_notification_badge"
+            android:gravity="center"
+            android:minWidth="20dp"
+            android:paddingStart="5dp"
+            android:paddingEnd="5dp"
+            android:textColor="@color/white"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </FrameLayout>
 </LinearLayout>

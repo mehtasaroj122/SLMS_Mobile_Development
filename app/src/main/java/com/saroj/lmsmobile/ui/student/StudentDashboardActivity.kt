@@ -25,8 +25,10 @@ import com.saroj.lmsmobile.ui.student.fragments.StudentMyRequestsFragment
 import com.saroj.lmsmobile.ui.student.fragments.StudentMyBooksFragment
 import com.saroj.lmsmobile.ui.student.fragments.StudentMyFinesFragment
 import com.saroj.lmsmobile.ui.student.fragments.StudentProfileFragment
+import com.saroj.lmsmobile.ui.student.fragments.StudentMoreFragment
 import com.saroj.lmsmobile.ui.student.fragments.StudentSearchBooksFragment
 import com.saroj.lmsmobile.ui.student.notifications.StudentNotificationsFragment
+import com.saroj.lmsmobile.utils.NotificationRefreshBus
 import kotlinx.coroutines.launch
 
 /**
@@ -64,10 +66,14 @@ class StudentDashboardActivity : BaseActivity() {
         // Initialize views
         initializeViews()
         setupStudentHeader()
+        setupHeaderNotifications()
 
         // Set up navigation
         setupBottomNavigation()
         setupBackStackNavigation()
+        if (savedInstanceState != null) {
+            markBottomNavItemChecked(lastSelectedNavItemId)
+        }
 
         // Load default fragment
         if (savedInstanceState == null) {
@@ -129,6 +135,40 @@ class StudentDashboardActivity : BaseActivity() {
         ViewCompat.requestApplyInsets(bottomNavigation)
     }
 
+    private fun setupHeaderNotifications() {
+        findViewById<View>(R.id.buttonHeaderNotifications)?.setOnClickListener {
+            openNotifications()
+        }
+        loadHeaderNotificationCount()
+        activityScope.launch {
+            NotificationRefreshBus.events.collect {
+                loadHeaderNotificationCount()
+            }
+        }
+    }
+
+    private fun loadHeaderNotificationCount() {
+        val apiService = RetrofitClient.getApiService(tokenManager)
+        val repository = NotificationRepository(apiService, tokenManager)
+        activityScope.launch {
+            repository.getNotificationCount().collect { result ->
+                when (result) {
+                    is NetworkResult.Success -> updateHeaderNotificationBadge(result.data.unreadCount ?: 0)
+                    is NetworkResult.Error,
+                    is NetworkResult.Unauthorized -> updateHeaderNotificationBadge(0)
+                    is NetworkResult.Loading -> Unit
+                }
+            }
+        }
+    }
+
+    private fun updateHeaderNotificationBadge(unreadCount: Int) {
+        findViewById<TextView>(R.id.textHeaderNotificationBadge)?.apply {
+            text = if (unreadCount > 99) "99+" else unreadCount.toString()
+            visibility = if (unreadCount > 0) View.VISIBLE else View.GONE
+        }
+    }
+
     /**
      * Sets up bottom navigation listener.
      */
@@ -156,9 +196,9 @@ class StudentDashboardActivity : BaseActivity() {
                     true
                 }
                 R.id.nav_more -> {
-                    showMoreBottomSheet()
-                    markBottomNavItemChecked(R.id.nav_more)
-                    false
+                    lastSelectedNavItemId = menuItem.itemId
+                    loadFragment(StudentMoreFragment())
+                    true
                 }
                 else -> false
             }
@@ -255,6 +295,10 @@ class StudentDashboardActivity : BaseActivity() {
                 logout()
             }
             .show()
+    }
+
+    fun showLogoutConfirmationFromMore() {
+        showLogoutConfirmation()
     }
 
     /**

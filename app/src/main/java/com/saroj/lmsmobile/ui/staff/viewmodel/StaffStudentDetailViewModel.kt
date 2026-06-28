@@ -79,6 +79,7 @@ class StaffStudentDetailViewModel(
     private var issuedLoaded = false
     private var finesLoaded = false
     private var requestsLoaded = false
+    private var studentLoaded = false
 
     fun loadStudentDetails(studentId: Int) {
         currentStudentId = studentId
@@ -91,12 +92,15 @@ class StaffStudentDetailViewModel(
                     }
                     is NetworkResult.Success -> {
                         _isLoadingStudent.value = false
+                        studentLoaded = true
                         _student.value = result.data.data?.student
                         loadIssuedBooks(studentId)
                     }
                     is NetworkResult.Error -> {
                         _isLoadingStudent.value = false
-                        _errorMessage.value = result.message
+                        if (!studentLoaded) {
+                            _errorMessage.value = result.message
+                        }
                     }
                     is NetworkResult.Unauthorized -> {
                         _isLoadingStudent.value = false
@@ -123,7 +127,9 @@ class StaffStudentDetailViewModel(
                     }
                     is NetworkResult.Error -> {
                         _isLoadingIssuedBooks.value = false
-                        _errorMessage.value = result.message
+                        if (!issuedLoaded) {
+                            _errorMessage.value = result.message
+                        }
                     }
                     is NetworkResult.Unauthorized -> {
                         _isLoadingIssuedBooks.value = false
@@ -151,7 +157,9 @@ class StaffStudentDetailViewModel(
                     }
                     is NetworkResult.Error -> {
                         _isLoadingFines.value = false
-                        _errorMessage.value = result.message
+                        if (!finesLoaded) {
+                            _errorMessage.value = result.message
+                        }
                     }
                     is NetworkResult.Unauthorized -> {
                         _isLoadingFines.value = false
@@ -178,7 +186,9 @@ class StaffStudentDetailViewModel(
                     }
                     is NetworkResult.Error -> {
                         _isLoadingBookRequests.value = false
-                        _errorMessage.value = result.message
+                        if (!requestsLoaded) {
+                            _errorMessage.value = result.message
+                        }
                     }
                     is NetworkResult.Unauthorized -> {
                         _isLoadingBookRequests.value = false

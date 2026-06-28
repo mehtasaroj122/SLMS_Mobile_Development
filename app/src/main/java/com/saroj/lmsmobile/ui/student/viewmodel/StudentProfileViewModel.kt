@@ -116,10 +116,20 @@ class StudentProfileViewModel(
     private fun loadProfile() {
         viewModelScope.launch {
             repository.getProfile().collect { result ->
-                if (result is NetworkResult.Success) {
-                    currentProfile = result.data
+                when (result) {
+                    is NetworkResult.Success -> {
+                        currentProfile = result.data
+                        _profileState.value = result
+                    }
+                    is NetworkResult.Error -> {
+                        currentProfile?.let {
+                            _profileState.value = NetworkResult.Success(it)
+                        } ?: run {
+                            _profileState.value = result
+                        }
+                    }
+                    else -> _profileState.value = result
                 }
-                _profileState.value = result
             }
         }
     }

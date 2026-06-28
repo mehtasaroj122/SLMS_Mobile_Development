@@ -48,6 +48,8 @@ class StaffFinesViewModel(
 
     private var searchJob: Job? = null
     private var loadedOnce = false
+    private var summaryLoaded = false
+    private var studentsLoaded = false
 
     fun loadInitial() {
         if (loadedOnce) return
@@ -65,11 +67,14 @@ class StaffFinesViewModel(
                     }
                     is NetworkResult.Success -> {
                         _isLoadingSummary.value = false
+                        summaryLoaded = true
                         _summary.value = result.data.data
                     }
                     is NetworkResult.Error -> {
                         _isLoadingSummary.value = false
-                        _summaryError.value = result.message
+                        if (!summaryLoaded) {
+                            _summaryError.value = result.message
+                        }
                     }
                     is NetworkResult.Unauthorized -> {
                         _isLoadingSummary.value = false
@@ -92,13 +97,16 @@ class StaffFinesViewModel(
                     is NetworkResult.Success -> {
                         _isLoadingStudents.value = false
                         _isSearching.value = false
+                        studentsLoaded = true
                         _students.value = result.data.data
                     }
                     is NetworkResult.Error -> {
                         _isLoadingStudents.value = false
                         _isSearching.value = false
-                        _students.value = emptyList()
-                        _studentsError.value = result.message
+                        if (!studentsLoaded) {
+                            _students.value = emptyList()
+                            _studentsError.value = result.message
+                        }
                     }
                     is NetworkResult.Unauthorized -> {
                         _isLoadingStudents.value = false

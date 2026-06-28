@@ -467,7 +467,7 @@ class StaffStudentDetailScreen : Fragment() {
         val card = baseCard(14)
         val content = vertical(16)
         val header = horizontal()
-        header.addView(iconBox(R.drawable.ic_book, statusTint(status), 52, 26))
+        header.addView(bookCoverBox(book.displayTitle, book.coverImageUrl, statusTint(status), 52))
         val titles = vertical()
         titles.addView(text(book.displayTitle, 16, R.color.student_text_primary, bold = true))
         titles.addView(text(book.author.orDash(), 12, R.color.student_text_muted, topMargin = 3))
@@ -488,7 +488,7 @@ class StaffStudentDetailScreen : Fragment() {
         val card = baseCard(14)
         val content = vertical(16)
         val header = horizontal()
-        header.addView(iconBox(R.drawable.ic_rupee, fineStatusTint(status), 52, 25))
+        header.addView(bookCoverBox(fine.bookTitle.orDash(), fine.coverImageUrl, fineStatusTint(status), 52))
         val titles = vertical()
         titles.addView(text(fine.bookTitle.orDash(), 16, R.color.student_text_primary, bold = true))
         fine.author?.takeIf { it.isNotBlank() }?.let { titles.addView(text(it, 12, R.color.student_text_muted, topMargin = 3)) }
@@ -524,7 +524,7 @@ class StaffStudentDetailScreen : Fragment() {
         val card = baseCard(14)
         val content = vertical(16)
         val header = horizontal()
-        header.addView(iconBox(R.drawable.ic_clipboard, requestStatusTint(status), 52, 25))
+        header.addView(bookCoverBox(request.displayBookTitle, request.coverImageUrl ?: request.book?.coverImageUrl, requestStatusTint(status), 52))
         val titles = vertical()
         titles.addView(text(request.displayBookTitle, 16, R.color.student_text_primary, bold = true))
         titles.addView(text(request.displayAuthor.orDash(), 12, R.color.student_text_muted, topMargin = 3))
@@ -794,6 +794,56 @@ private fun Fragment.iconBox(icon: Int, tint: Int, size: Int = 42, iconSize: Int
     return box
 }
 
+private fun Fragment.bookCoverBox(title: String?, rawUrl: String?, tint: Int, size: Int): FrameLayout {
+    val box = FrameLayout(requireContext()).apply {
+        background = rounded(badgeBackgroundFor(tint), dp(14))
+        clipToOutline = true
+        layoutParams = LinearLayout.LayoutParams(dp(size), dp(size)).apply { marginEnd = dp(10) }
+    }
+    val initial = TextView(requireContext()).apply {
+        text = titleInitial(title)
+        gravity = Gravity.CENTER
+        textSize = 19f
+        typeface = Typeface.DEFAULT_BOLD
+        setTextColor(color(tint))
+        layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+    }
+    val image = ImageView(requireContext()).apply {
+        scaleType = ImageView.ScaleType.CENTER_CROP
+        visibility = View.GONE
+        layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+    }
+    box.addView(initial)
+    box.addView(image)
+    loadBookCoverImage(image, initial, rawUrl)
+    return box
+}
+
+private fun Fragment.loadBookCoverImage(image: ImageView, initial: TextView, rawUrl: String?) {
+    val coverUrl = normalizeMediaUrl(rawUrl)
+    image.tag = coverUrl
+    if (coverUrl.isNullOrBlank()) {
+        image.visibility = View.GONE
+        initial.visibility = View.VISIBLE
+        return
+    }
+    thread(name = "staff-student-book-cover", isDaemon = true) {
+        val bitmap = runCatching { URL(coverUrl).openStream().use { BitmapFactory.decodeStream(it) } }
+            .onFailure { Log.w("StaffStudents", "Book cover failed to load: $coverUrl", it) }
+            .getOrNull()
+        image.post {
+            if (image.tag == coverUrl && bitmap != null) {
+                image.setImageBitmap(bitmap)
+                image.visibility = View.VISIBLE
+                initial.visibility = View.GONE
+            } else {
+                image.visibility = View.GONE
+                initial.visibility = View.VISIBLE
+            }
+        }
+    }
+}
+
 private fun Fragment.avatarBox(name: String?, rawUrl: String?, size: Int): FrameLayout {
     val box = FrameLayout(requireContext()).apply {
         background = rounded(color(R.color.profile_blue_bg), dp(18))
@@ -925,3 +975,5 @@ private fun initials(name: String?): String = name.orEmpty().trim().split(Regex(
 private fun String.titleCase(): String = replace("_", " ").split(" ").filter { it.isNotBlank() }.joinToString(" ") {
     it.lowercase(Locale.US).replaceFirstChar { char -> if (char.isLowerCase()) char.titlecase(Locale.US) else char.toString() }
 }
+private fun titleInitial(title: String?): String =
+    title?.trim()?.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar()?.toString() ?: "B"

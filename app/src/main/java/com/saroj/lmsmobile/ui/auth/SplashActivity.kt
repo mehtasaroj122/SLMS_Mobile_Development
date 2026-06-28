@@ -50,6 +50,11 @@ class SplashActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!isTaskRoot && intent?.action == Intent.ACTION_MAIN) {
+            finish()
+            return
+        }
+
         setContentView(R.layout.activity_splash)
         playSplashAnimation()
 

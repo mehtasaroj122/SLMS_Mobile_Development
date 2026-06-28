@@ -4,6 +4,8 @@ import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.saroj.lmsmobile.api.ApiService
+import com.google.gson.reflect.TypeToken
+import com.saroj.lmsmobile.data.local.cache.LocalCacheProvider
 import com.saroj.lmsmobile.data.models.common.ErrorResponse
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.models.notification.AppNotification
@@ -23,12 +25,17 @@ class NotificationRepository(
     private val gson = Gson()
 
     fun getNotifications(): Flow<NetworkResult<List<AppNotification>>> = flow {
-        emit(NetworkResult.Loading())
+        val cacheKey = "notifications:all"
+        val listType = object : TypeToken<List<AppNotification>>() {}.type
+        val cached = LocalCacheProvider.cache?.read<List<AppNotification>>(cacheKey, listType)
+        if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
         val response = apiService.getNotifications()
         if (response.isSuccessful) {
-            emit(NetworkResult.Success(extractNotificationElements(response.body()).mapIndexed { index, element ->
+            val notifications = extractNotificationElements(response.body()).mapIndexed { index, element ->
                 parseNotification(element, fallbackId = index + 1)
-            }))
+            }
+            LocalCacheProvider.cache?.write(cacheKey, notifications)
+            emit(NetworkResult.Success(notifications))
         } else {
             emit(handleError(response))
         }
@@ -37,12 +44,17 @@ class NotificationRepository(
     }
 
     fun getUnreadNotifications(): Flow<NetworkResult<List<AppNotification>>> = flow {
-        emit(NetworkResult.Loading())
+        val cacheKey = "notifications:unread"
+        val listType = object : TypeToken<List<AppNotification>>() {}.type
+        val cached = LocalCacheProvider.cache?.read<List<AppNotification>>(cacheKey, listType)
+        if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
         val response = apiService.getUnreadNotifications()
         if (response.isSuccessful) {
-            emit(NetworkResult.Success(extractNotificationElements(response.body()).mapIndexed { index, element ->
+            val notifications = extractNotificationElements(response.body()).mapIndexed { index, element ->
                 parseNotification(element, fallbackId = index + 1)
-            }))
+            }
+            LocalCacheProvider.cache?.write(cacheKey, notifications)
+            emit(NetworkResult.Success(notifications))
         } else {
             emit(handleError(response))
         }
@@ -51,10 +63,14 @@ class NotificationRepository(
     }
 
     fun getNotificationCount(): Flow<NetworkResult<NotificationCountResponse>> = flow {
-        emit(NetworkResult.Loading())
+        val cacheKey = "notifications:count"
+        val cached = LocalCacheProvider.cache?.read(cacheKey, NotificationCountResponse::class.java)
+        if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
         val response = apiService.getNotificationCount()
         if (response.isSuccessful) {
-            emit(NetworkResult.Success(parseCount(response.body())))
+            val count = parseCount(response.body())
+            LocalCacheProvider.cache?.write(cacheKey, count)
+            emit(NetworkResult.Success(count))
         } else {
             emit(handleError(response))
         }

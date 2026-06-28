@@ -6,6 +6,7 @@ import android.util.TypedValue
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.widget.EditText
+import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -13,6 +14,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.widget.doOnTextChanged
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.textfield.TextInputLayout
 import com.saroj.lmsmobile.MainApplication
 import com.saroj.lmsmobile.R
@@ -24,6 +26,8 @@ import com.saroj.lmsmobile.ui.auth.viewmodel.LoginViewModel
 import com.saroj.lmsmobile.ui.staff.StaffDashboardActivity
 import com.saroj.lmsmobile.ui.student.StudentDashboardActivity
 import com.saroj.lmsmobile.utils.Constants
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
 
 /**
  * LoginActivity handles user authentication.
@@ -67,6 +71,7 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var loadingProgressBar: ProgressBar
     private lateinit var loginButtonIcon: ImageView
     private lateinit var loginButtonText: TextView
+    private lateinit var rememberMeCheckBox: CheckBox
 
     private lateinit var viewModel: LoginViewModel
 
@@ -82,6 +87,8 @@ class LoginActivity : AppCompatActivity() {
 
         // Set up listeners
         setupListeners()
+
+        loadRememberedLogin()
 
         // Set up observers
         observeViewModel()
@@ -104,6 +111,7 @@ class LoginActivity : AppCompatActivity() {
         loadingProgressBar = findViewById(R.id.progressBarLoading)
         loginButtonIcon = findViewById(R.id.imageViewLoginIcon)
         loginButtonText = findViewById(R.id.textViewLoginButtonText)
+        rememberMeCheckBox = findViewById(R.id.checkBoxRememberMe)
 
         emailInputLayout.isHintEnabled = false
         passwordInputLayout.isHintEnabled = false
@@ -157,6 +165,19 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    private fun loadRememberedLogin() {
+        lifecycleScope.launch {
+            val app = application as MainApplication
+            val rememberEnabled = app.tokenManager.isRememberMeEnabled().firstOrNull() == true
+            val rememberedEmail = app.tokenManager.getRememberedEmail().firstOrNull()
+            rememberMeCheckBox.isChecked = rememberEnabled
+            if (rememberEnabled && !rememberedEmail.isNullOrBlank()) {
+                emailEditText.setText(rememberedEmail)
+                updateFloatingLabel(emailEditText, emailFloatingLabel, "Email address", animate = false)
+            }
+        }
+    }
+
     /**
      * Performs login with email and password from input fields.
      */
@@ -180,7 +201,9 @@ class LoginActivity : AppCompatActivity() {
                 is NetworkResult.Success -> {
                     showLoadingState(false)
                     android.util.Log.d("LoginActivity", "Login successful, role: ${result.data.user.role}")
-                    navigateToDashboard(result.data.user.role)
+                    persistRememberMeChoice {
+                        navigateToDashboard(result.data.user.role)
+                    }
                 }
                 is NetworkResult.Error -> {
                     showLoadingState(false)
@@ -222,6 +245,20 @@ class LoginActivity : AppCompatActivity() {
         passwordEditText.isEnabled = !isLoading
         emailInputLayout.isEnabled = !isLoading
         passwordInputLayout.isEnabled = !isLoading
+        rememberMeCheckBox.isEnabled = !isLoading
+    }
+
+    private fun persistRememberMeChoice(onComplete: () -> Unit) {
+        val email = emailEditText.text.toString().trim()
+        lifecycleScope.launch {
+            val app = application as MainApplication
+            if (rememberMeCheckBox.isChecked) {
+                app.tokenManager.saveRememberedLogin(email)
+            } else {
+                app.tokenManager.clearRememberedLogin()
+            }
+            onComplete()
+        }
     }
 
     private fun updateAllFloatingLabels(animate: Boolean = true) {

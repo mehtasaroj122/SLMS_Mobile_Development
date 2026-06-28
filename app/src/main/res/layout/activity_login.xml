@@ -198,11 +198,11 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <CheckBox
+                <com.google.android.material.checkbox.MaterialCheckBox
                     android:id="@+id/checkBoxRememberMe"
                     android:layout_width="wrap_content"
                     android:layout_height="48dp"
-                    android:button="@drawable/bg_checkbox"
+                    android:buttonTint="@color/auth_checkbox_tint"
                     android:gravity="center_vertical"
                     android:minWidth="0dp"
                     android:paddingStart="0dp"

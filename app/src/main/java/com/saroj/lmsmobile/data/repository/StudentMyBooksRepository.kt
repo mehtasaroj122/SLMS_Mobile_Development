@@ -3,7 +3,9 @@ package com.saroj.lmsmobile.data.repository
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
+import com.google.gson.reflect.TypeToken
 import com.saroj.lmsmobile.api.ApiService
+import com.saroj.lmsmobile.data.local.cache.LocalCacheProvider
 import com.saroj.lmsmobile.data.models.common.ErrorResponse
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.storage.TokenManager
@@ -27,10 +29,13 @@ class StudentMyBooksRepository(
     private val gson = Gson()
 
     fun getSummary(): Flow<NetworkResult<MyBooksSummaryUiModel>> = flow {
-        emit(NetworkResult.Loading())
+        val cached = LocalCacheProvider.cache?.read(CACHE_KEY_SUMMARY, MyBooksSummaryUiModel::class.java)
+        if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
         val response = apiService.getStudentMyBooksSummary()
         if (response.isSuccessful) {
-            emit(NetworkResult.Success(parseSummary(response.body())))
+            val summary = parseSummary(response.body())
+            LocalCacheProvider.cache?.write(CACHE_KEY_SUMMARY, summary)
+            emit(NetworkResult.Success(summary))
         } else {
             emit(handleError(response))
         }
@@ -57,12 +62,16 @@ class StudentMyBooksRepository(
         defaultStatus: MyBookStatus,
         request: suspend () -> Response<JsonElement>
     ): Flow<NetworkResult<List<MyBookUiModel>>> = flow {
-        emit(NetworkResult.Loading())
+        val cacheKey = "student:my-books:${defaultStatus.name.lowercase(Locale.US)}"
+        val listType = object : TypeToken<List<MyBookUiModel>>() {}.type
+        val cached = LocalCacheProvider.cache?.read<List<MyBookUiModel>>(cacheKey, listType)
+        if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
         val response = request()
         if (response.isSuccessful) {
             val books = extractBookElements(response.body()).mapIndexed { index, element ->
                 parseBook(element, defaultStatus, index)
             }
+            LocalCacheProvider.cache?.write(cacheKey, books)
             emit(NetworkResult.Success(books))
         } else {
             emit(handleError(response))
@@ -458,5 +467,9 @@ class StudentMyBooksRepository(
                     }.getOrNull()
             }
         }
+    }
+
+    private companion object {
+        const val CACHE_KEY_SUMMARY = "student:my-books:summary"
     }
 }

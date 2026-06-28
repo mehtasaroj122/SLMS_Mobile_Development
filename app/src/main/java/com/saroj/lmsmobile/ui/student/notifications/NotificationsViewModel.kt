@@ -48,6 +48,8 @@ class NotificationsViewModel(
     private val _unauthorized = MutableLiveData(false)
     val unauthorized: LiveData<Boolean> = _unauthorized
 
+    private var notificationsLoaded = false
+
     fun loadNotifications() {
         viewModelScope.launch {
             repository.getNotifications().collect { result ->
@@ -58,6 +60,7 @@ class NotificationsViewModel(
                     }
                     is NetworkResult.Success -> {
                         _isLoading.value = false
+                        notificationsLoaded = true
                         _notifications.value = result.data.sortedByDescending { parseDateMillis(it.createdAt) }
                         publishUnreadCountFromCache()
                         filterByTab()
@@ -65,7 +68,12 @@ class NotificationsViewModel(
                     }
                     is NetworkResult.Error -> {
                         _isLoading.value = false
-                        _errorMessage.value = result.message
+                        if (notificationsLoaded) {
+                            filterByTab()
+                            _actionMessage.value = "Offline: showing saved notifications."
+                        } else {
+                            _errorMessage.value = result.message
+                        }
                     }
                     is NetworkResult.Unauthorized -> {
                         _isLoading.value = false

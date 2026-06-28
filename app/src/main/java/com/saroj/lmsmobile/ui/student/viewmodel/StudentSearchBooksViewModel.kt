@@ -44,6 +44,7 @@ class StudentSearchBooksViewModel(
     private var currentQuery = ""
     private var catalogJob: Job? = null
     private var searchJob: Job? = null
+    private var booksLoaded = false
 
     private companion object {
         const val PAGE_SIZE = 20
@@ -255,6 +256,7 @@ class StudentSearchBooksViewModel(
                 val uniqueBooks = loadedBooks.distinctBy { it.id }
                 loadedBooks.clear()
                 loadedBooks.addAll(uniqueBooks)
+                booksLoaded = true
 
                 isLoading = false
                 _bottomLoading.value = false
@@ -263,7 +265,11 @@ class StudentSearchBooksViewModel(
             is NetworkResult.Error -> {
                 isLoading = false
                 _bottomLoading.value = false
-                _booksState.value = NetworkResult.Error(result.message, result.code)
+                if (booksLoaded) {
+                    publishFilteredBooks()
+                } else {
+                    _booksState.value = NetworkResult.Error(result.message, result.code)
+                }
             }
             is NetworkResult.Unauthorized -> {
                 isLoading = false
@@ -309,6 +315,7 @@ class StudentSearchBooksViewModel(
             isSearching = false
         }
         loadedBooks.clear()
+        booksLoaded = false
     }
 
     private fun reloadCurrentCatalog() {

@@ -39,6 +39,7 @@ class StudentMyRequestsViewModel(
     private var query = ""
     private var requestsCache: List<MyRequestUiModel> = emptyList()
     private var filteredRequestsCache: List<MyRequestUiModel> = emptyList()
+    private var requestsLoaded = false
     private var visibleLimit = PAGE_SIZE
     private var loadingMoreJob: Job? = null
     private var requestsJob: Job? = null
@@ -140,6 +141,16 @@ class StudentMyRequestsViewModel(
                             _summaryState.value = result
                         }
                     }
+                    is NetworkResult.Error -> {
+                        if (serverSummary != null || requestsLoaded) {
+                            _summaryState.value = NetworkResult.Error(
+                                "Offline: showing saved request data.",
+                                result.code
+                            )
+                        } else {
+                            _summaryState.value = result
+                        }
+                    }
                     else -> _summaryState.value = result
                 }
             }
@@ -160,10 +171,21 @@ class StudentMyRequestsViewModel(
                     is NetworkResult.Loading -> _requestsState.value = NetworkResult.Loading()
                     is NetworkResult.Success -> {
                         requestsCache = result.data
+                        requestsLoaded = true
                         publishSummaryFromCache()
                         publishFilteredRequests()
                     }
-                    is NetworkResult.Error -> _requestsState.value = NetworkResult.Error(result.message, result.code)
+                    is NetworkResult.Error -> {
+                        if (requestsLoaded) {
+                            publishFilteredRequests()
+                            _summaryState.value = NetworkResult.Error(
+                                "Offline: showing saved request data.",
+                                result.code
+                            )
+                        } else {
+                            _requestsState.value = NetworkResult.Error(result.message, result.code)
+                        }
+                    }
                     is NetworkResult.Unauthorized -> _requestsState.value = NetworkResult.Unauthorized()
                 }
             }

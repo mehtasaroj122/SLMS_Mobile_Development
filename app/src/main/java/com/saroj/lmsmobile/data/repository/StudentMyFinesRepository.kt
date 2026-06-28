@@ -3,7 +3,9 @@ package com.saroj.lmsmobile.data.repository
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
+import com.google.gson.reflect.TypeToken
 import com.saroj.lmsmobile.api.ApiService
+import com.saroj.lmsmobile.data.local.cache.LocalCacheProvider
 import com.saroj.lmsmobile.data.models.common.ErrorResponse
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.storage.TokenManager
@@ -27,10 +29,13 @@ class StudentMyFinesRepository(
     private val gson = Gson()
 
     fun getSummary(): Flow<NetworkResult<MyFinesSummaryUiModel>> = flow {
-        emit(NetworkResult.Loading())
+        val cached = LocalCacheProvider.cache?.read(CACHE_KEY_SUMMARY, MyFinesSummaryUiModel::class.java)
+        if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
         val response = apiService.getStudentFinesSummary()
         if (response.isSuccessful) {
-            emit(NetworkResult.Success(parseSummary(response.body())))
+            val summary = parseSummary(response.body())
+            LocalCacheProvider.cache?.write(CACHE_KEY_SUMMARY, summary)
+            emit(NetworkResult.Success(summary))
         } else {
             emit(handleError(response))
         }
@@ -38,15 +43,15 @@ class StudentMyFinesRepository(
         emit(NetworkResult.Error(e.message ?: Constants.ERROR_UNKNOWN))
     }
 
-    fun getAllFines(): Flow<NetworkResult<List<MyFineUiModel>>> = loadFines(includeOverdue = true) {
+    fun getAllFines(): Flow<NetworkResult<List<MyFineUiModel>>> = loadFines(cacheName = "all", includeOverdue = true) {
         apiService.getAuthenticatedStudentFines()
     }
 
-    fun getPendingFines(): Flow<NetworkResult<List<MyFineUiModel>>> = loadFines(includeOverdue = true) {
+    fun getPendingFines(): Flow<NetworkResult<List<MyFineUiModel>>> = loadFines(cacheName = "pending", includeOverdue = true) {
         apiService.getAuthenticatedStudentPendingFines()
     }
 
-    fun getPaidFines(): Flow<NetworkResult<List<MyFineUiModel>>> = loadFines {
+    fun getPaidFines(): Flow<NetworkResult<List<MyFineUiModel>>> = loadFines(cacheName = "paid") {
         apiService.getAuthenticatedStudentPaidFines()
     }
 
@@ -84,10 +89,14 @@ class StudentMyFinesRepository(
     }
 
     private fun loadFines(
+        cacheName: String,
         includeOverdue: Boolean = false,
         request: suspend () -> Response<JsonElement>
     ): Flow<NetworkResult<List<MyFineUiModel>>> = flow {
-        emit(NetworkResult.Loading())
+        val cacheKey = "student:fines:$cacheName"
+        val listType = object : TypeToken<List<MyFineUiModel>>() {}.type
+        val cached = LocalCacheProvider.cache?.read<List<MyFineUiModel>>(cacheKey, listType)
+        if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
         val response = request()
         if (response.isSuccessful) {
             val fines = extractFineElements(response.body()).mapIndexed { index, element ->
@@ -110,7 +119,9 @@ class StudentMyFinesRepository(
                 }
             }
 
-            emit(NetworkResult.Success(result.sortedByDescending { it.dueDateSort }))
+            val sorted = result.sortedByDescending { it.dueDateSort }
+            LocalCacheProvider.cache?.write(cacheKey, sorted)
+            emit(NetworkResult.Success(sorted))
         } else {
             emit(handleError(response))
         }
@@ -521,5 +532,9 @@ class StudentMyFinesRepository(
                     }.getOrNull()
             }
         }
+    }
+
+    private companion object {
+        const val CACHE_KEY_SUMMARY = "student:fines:summary"
     }
 }

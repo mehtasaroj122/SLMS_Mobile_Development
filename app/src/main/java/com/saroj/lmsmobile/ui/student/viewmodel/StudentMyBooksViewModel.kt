@@ -76,7 +76,18 @@ class StudentMyBooksViewModel(
                         publishSummaryFromCacheIfNeeded()
                         publishFilteredBooks(result.data)
                     }
-                    is NetworkResult.Error -> _booksState.value = NetworkResult.Error(result.message, result.code)
+                    is NetworkResult.Error -> {
+                        val cachedTabBooks = tabCache[tab]
+                        if (cachedTabBooks != null) {
+                            publishFilteredBooks(cachedTabBooks)
+                            _summaryState.value = NetworkResult.Error(
+                                "Offline: showing saved books data.",
+                                result.code
+                            )
+                        } else {
+                            _booksState.value = NetworkResult.Error(result.message, result.code)
+                        }
+                    }
                     is NetworkResult.Unauthorized -> _booksState.value = NetworkResult.Unauthorized()
                 }
             }
@@ -121,7 +132,14 @@ class StudentMyBooksViewModel(
                 if (result is NetworkResult.Success) {
                     serverSummary = result.data
                 }
-                _summaryState.value = result
+                if (result is NetworkResult.Error && (serverSummary != null || tabCache.isNotEmpty())) {
+                    _summaryState.value = NetworkResult.Error(
+                        "Offline: showing saved books data.",
+                        result.code
+                    )
+                } else {
+                    _summaryState.value = result
+                }
                 synchronizePendingFine()
             }
         }

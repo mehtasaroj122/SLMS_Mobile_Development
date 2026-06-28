@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.gson.Gson
 import com.saroj.lmsmobile.data.models.common.ErrorResponse
 import com.saroj.lmsmobile.api.ApiService
+import com.saroj.lmsmobile.data.local.cache.LocalCacheProvider
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.data.models.studentdashboard.StudentDashboardResponse
 import com.saroj.lmsmobile.storage.TokenManager
@@ -19,12 +20,18 @@ class StudentDashboardRepository(
     private val gson = Gson()
 
     fun getStudentDashboard(): Flow<NetworkResult<StudentDashboardResponse>> = flow {
-        emit(NetworkResult.Loading())
+        val cached = LocalCacheProvider.cache?.read(CACHE_KEY_STUDENT_DASHBOARD, StudentDashboardResponse::class.java)
+        if (cached != null) {
+            emit(NetworkResult.Success(cached))
+        } else {
+            emit(NetworkResult.Loading())
+        }
 
         val response = apiService.getStudentDashboard()
         if (response.isSuccessful) {
             val dashboard = response.body()?.data
             if (dashboard != null) {
+                LocalCacheProvider.cache?.write(CACHE_KEY_STUDENT_DASHBOARD, dashboard)
                 emit(NetworkResult.Success(dashboard))
             } else {
                 emit(NetworkResult.Error("Dashboard data was missing from server response", response.code()))
@@ -60,4 +67,8 @@ class StudentDashboardRepository(
     }
 
     private fun String?.orNullOrBlank(): String? = if (isNullOrBlank()) null else this
+
+    private companion object {
+        const val CACHE_KEY_STUDENT_DASHBOARD = "student:dashboard"
+    }
 }

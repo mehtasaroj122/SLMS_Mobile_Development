@@ -3,7 +3,9 @@ package com.saroj.lmsmobile.data.repository
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
+import com.google.gson.reflect.TypeToken
 import com.saroj.lmsmobile.api.ApiService
+import com.saroj.lmsmobile.data.local.cache.LocalCacheProvider
 import com.saroj.lmsmobile.data.models.common.ErrorResponse
 import com.saroj.lmsmobile.data.models.common.NetworkResult
 import com.saroj.lmsmobile.storage.TokenManager
@@ -27,10 +29,13 @@ class StudentMyRequestsRepository(
     private val gson = Gson()
 
     fun getSummary(): Flow<NetworkResult<MyRequestsSummaryUiModel>> = flow {
-        emit(NetworkResult.Loading())
+        val cached = LocalCacheProvider.cache?.read(CACHE_KEY_SUMMARY, MyRequestsSummaryUiModel::class.java)
+        if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
         val response = apiService.getStudentRequestsSummary()
         if (response.isSuccessful) {
-            emit(NetworkResult.Success(parseSummary(response.body())))
+            val summary = parseSummary(response.body())
+            LocalCacheProvider.cache?.write(CACHE_KEY_SUMMARY, summary)
+            emit(NetworkResult.Success(summary))
         } else {
             emit(handleError(response))
         }
@@ -39,13 +44,17 @@ class StudentMyRequestsRepository(
     }
 
     fun getRequests(): Flow<NetworkResult<List<MyRequestUiModel>>> = flow {
-        emit(NetworkResult.Loading())
+        val listType = object : TypeToken<List<MyRequestUiModel>>() {}.type
+        val cached = LocalCacheProvider.cache?.read<List<MyRequestUiModel>>(CACHE_KEY_REQUESTS, listType)
+        if (cached != null) emit(NetworkResult.Success(cached)) else emit(NetworkResult.Loading())
         val response = apiService.getAuthenticatedStudentRequests()
         if (response.isSuccessful) {
             val requests = extractRequestElements(response.body()).mapIndexed { index, element ->
                 parseRequest(element, fallbackId = index + 1)
             }
-            emit(NetworkResult.Success(requests.sortedByDescending { it.requestDateSort }))
+            val sorted = requests.sortedByDescending { it.requestDateSort }
+            LocalCacheProvider.cache?.write(CACHE_KEY_REQUESTS, sorted)
+            emit(NetworkResult.Success(sorted))
         } else {
             emit(handleError(response))
         }
@@ -387,5 +396,10 @@ class StudentMyRequestsRepository(
                 runCatching { value.asInt }.getOrNull()
             }
         } ?: fallback
+    }
+
+    private companion object {
+        const val CACHE_KEY_SUMMARY = "student:requests:summary"
+        const val CACHE_KEY_REQUESTS = "student:requests:list"
     }
 }

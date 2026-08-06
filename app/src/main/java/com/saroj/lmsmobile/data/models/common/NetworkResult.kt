@@ -34,10 +34,12 @@ sealed class NetworkResult<T> {
      * Error state with error message and optional HTTP status code.
      * @param message Human-readable error message
      * @param code HTTP status code (e.g., 404, 422, 500)
+     * @param errors Optional map of field-specific validation errors
      */
     data class Error<T>(
         val message: String,
-        val code: Int? = null
+        val code: Int? = null,
+        val errors: Map<String, List<String>>? = null
     ) : NetworkResult<T>()
 
     /**
@@ -59,7 +61,7 @@ sealed class NetworkResult<T> {
 inline fun <T, R> NetworkResult<T>.mapSuccess(block: (T) -> R): NetworkResult<R> {
     return when (this) {
         is NetworkResult.Success -> NetworkResult.Success(block(this.data))
-        is NetworkResult.Error -> NetworkResult.Error(this.message, this.code)
+        is NetworkResult.Error -> NetworkResult.Error(this.message, this.code, this.errors)
         is NetworkResult.Loading -> NetworkResult.Loading()
         is NetworkResult.Unauthorized -> NetworkResult.Unauthorized()
     }
@@ -69,18 +71,18 @@ inline fun <T, R> NetworkResult<T>.mapSuccess(block: (T) -> R): NetworkResult<R>
  * Extension function to handle all cases with a block.
  * Usage: result.handle(
  *     onSuccess = { ... },
- *     onError = { message, code -> ... }
+ *     onError = { message, code, errors -> ... }
  * )
  */
 inline fun <T> NetworkResult<T>.handle(
     onSuccess: (T) -> Unit,
-    onError: (String, Int?) -> Unit,
+    onError: (String, Int?, Map<String, List<String>>?) -> Unit,
     onLoading: () -> Unit = {},
     onUnauthorized: () -> Unit = {}
 ) {
     when (this) {
         is NetworkResult.Success -> onSuccess(this.data)
-        is NetworkResult.Error -> onError(this.message, this.code)
+        is NetworkResult.Error -> onError(this.message, this.code, this.errors)
         is NetworkResult.Loading -> onLoading()
         is NetworkResult.Unauthorized -> onUnauthorized()
     }

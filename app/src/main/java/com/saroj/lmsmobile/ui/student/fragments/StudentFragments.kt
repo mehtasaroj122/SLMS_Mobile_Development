@@ -1963,7 +1963,11 @@ class StudentProfileFragment : Fragment(), OnlineRefreshable {
                 }
                 is NetworkResult.Error -> {
                     swipeRefreshLayout.isRefreshing = false
-                    showToast(result.message)
+                    if (result.code == 422 && result.errors != null) {
+                        handleProfileValidationErrors(result.errors)
+                    } else {
+                        showToast(result.message)
+                    }
                 }
                 is NetworkResult.Unauthorized -> navigateToLogin()
             }
@@ -1993,6 +1997,9 @@ class StudentProfileFragment : Fragment(), OnlineRefreshable {
                     if (result.data.contains("password", ignoreCase = true)) {
                         clearPasswordForm()
                     }
+                    if (result.data.contains("Profile updated", ignoreCase = true)) {
+                        exitEditMode(restoreValues = false)
+                    }
                     showToast(result.data)
                     if (result.data.contains("deleted", ignoreCase = true)) {
                         navigateToLogin()
@@ -2000,7 +2007,11 @@ class StudentProfileFragment : Fragment(), OnlineRefreshable {
                 }
                 is NetworkResult.Error -> {
                     swipeRefreshLayout.isRefreshing = false
-                    showToast(result.message)
+                    if (result.code == 422 && result.errors != null) {
+                        handleProfileValidationErrors(result.errors)
+                    } else {
+                        showToast(result.message)
+                    }
                 }
                 is NetworkResult.Unauthorized -> navigateToLogin()
             }
@@ -2136,6 +2147,17 @@ class StudentProfileFragment : Fragment(), OnlineRefreshable {
         view?.findViewById<View>(R.id.buttonProfileSave)?.setOnClickListener {
             runIfOnline(NetworkMessages.OFFLINE_RETRY) { saveProfile() }
         }
+
+        view?.findViewById<EditText>(R.id.editProfileFullName)?.doAfterTextChanged {
+            clearProfileFieldError(R.id.editProfileFullName, R.id.errorProfileFullName)
+        }
+        view?.findViewById<EditText>(R.id.editProfileEmail)?.doAfterTextChanged {
+            clearProfileFieldError(R.id.editProfileEmail, R.id.errorProfileEmail)
+        }
+        view?.findViewById<EditText>(R.id.editProfilePhone)?.doAfterTextChanged {
+            clearProfileFieldError(R.id.editProfilePhone, R.id.errorProfilePhone)
+        }
+
         exitEditMode(restoreValues = false)
     }
 
@@ -2178,6 +2200,7 @@ class StudentProfileFragment : Fragment(), OnlineRefreshable {
     }
 
     private fun saveProfile() {
+        clearProfileErrors()
         val fullName = view?.findViewById<EditText>(R.id.editProfileFullName)?.text?.toString()?.trim().orEmpty()
         val email = view?.findViewById<EditText>(R.id.editProfileEmail)?.text?.toString()?.trim().orEmpty()
         val phone = view?.findViewById<EditText>(R.id.editProfilePhone)?.text?.toString()?.trim().orEmpty()
@@ -2191,7 +2214,6 @@ class StudentProfileFragment : Fragment(), OnlineRefreshable {
             gender = gender,
             address = address
         )
-        exitEditMode(restoreValues = false)
         viewModel.updateProfile(updatedProfile)
     }
 
@@ -2352,6 +2374,61 @@ class StudentProfileFragment : Fragment(), OnlineRefreshable {
 
         updatePasswordRequirements()
         return valid
+    }
+
+    private fun handleProfileValidationErrors(errors: Map<String, List<String>>) {
+        var profileErrorFound = false
+        var securityErrorFound = false
+
+        errors["name"]?.firstOrNull()?.let {
+            showProfileError(R.id.editProfileFullName, R.id.errorProfileFullName, it)
+            profileErrorFound = true
+        }
+        errors["email"]?.firstOrNull()?.let {
+            showProfileError(R.id.editProfileEmail, R.id.errorProfileEmail, it)
+            profileErrorFound = true
+        }
+        errors["phone"]?.firstOrNull()?.let {
+            showProfileError(R.id.editProfilePhone, R.id.errorProfilePhone, it)
+            profileErrorFound = true
+        }
+
+        errors["current_password"]?.firstOrNull()?.let {
+            setPasswordError(R.id.containerCurrentPassword, R.id.errorCurrentPassword, it)
+            securityErrorFound = true
+        }
+        errors["password"]?.firstOrNull()?.let {
+            setPasswordError(R.id.containerNewPassword, R.id.errorNewPassword, it)
+            securityErrorFound = true
+        }
+
+        if (profileErrorFound && selectedTab != ProfileTab.PROFILE) {
+            switchTab(ProfileTab.PROFILE)
+            enterEditMode()
+        } else if (securityErrorFound && selectedTab != ProfileTab.SECURITY) {
+            switchTab(ProfileTab.SECURITY)
+        } else if (profileErrorFound && !isEditMode) {
+            enterEditMode()
+        }
+    }
+
+    private fun showProfileError(fieldId: Int, errorId: Int, message: String) {
+        view?.findViewById<View>(fieldId)?.setBackgroundResource(R.drawable.bg_profile_input_error)
+        view?.findViewById<TextView>(errorId)?.apply {
+            text = message
+            visibility = View.VISIBLE
+        }
+    }
+
+    private fun clearProfileErrors() {
+        clearProfileFieldError(R.id.editProfileFullName, R.id.errorProfileFullName)
+        clearProfileFieldError(R.id.editProfileEmail, R.id.errorProfileEmail)
+        clearProfileFieldError(R.id.editProfilePhone, R.id.errorProfilePhone)
+    }
+
+    private fun clearProfileFieldError(fieldId: Int, errorId: Int) {
+        view?.findViewById<View>(fieldId)?.setBackgroundResource(R.drawable.bg_profile_input)
+        view?.findViewById<TextView>(errorId)?.visibility = View.GONE
     }
 
     private fun setupDeleteSection() {

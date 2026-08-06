@@ -317,6 +317,12 @@ class StudentMyFinesRepository(
             return MyFineStatus.PAID
         }
 
+        if (fine.booleanValue("is_waived", "waived", "isWaived") == true ||
+            !fine.stringValue("waived_date", "waived_at", "waivedDate", "waivedAt").isNullOrBlank()
+        ) {
+            return MyFineStatus.WAIVED
+        }
+
         return when (rawStatus?.trim()?.lowercase(Locale.US)) {
             "paid", "completed", "settled" -> MyFineStatus.PAID
             "waived", "cancelled", "canceled" -> MyFineStatus.WAIVED
@@ -445,6 +451,10 @@ class StudentMyFinesRepository(
             ?: pivot?.doubleValue("fine_amount", "fine", "amount", "pending_fine")
             ?: 0.0
 
+        val rawStatus = fine?.stringValue("status", "fine_status", "payment_status")
+            ?: issue.stringValue("fine_status", "payment_status", "status")
+        val status = parseStatus(rawStatus, fine ?: JsonObject())
+
         return MyFineUiModel(
             id = -1000 - (issue.intValue("id", "issue_id", fallback = index + 1)),
             bookTitle = book.stringValue("title") ?: "Untitled Book",
@@ -452,7 +462,7 @@ class StudentMyFinesRepository(
             dueDate = formatDate(rawDueDate),
             daysOverdue = daysOverdue,
             amount = formatCurrency(fineAmount),
-            status = MyFineStatus.PENDING,
+            status = status,
             author = book.stringValue("author") ?: "",
             isbn = book.stringValue("isbn") ?: "",
             coverImageUrl = book.stringValue("cover_image", "cover_url"),

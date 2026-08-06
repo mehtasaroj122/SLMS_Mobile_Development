@@ -150,12 +150,16 @@ class StudentMyBooksViewModel(
             finesRepository.getAllFines().collect { result ->
                 if (result is NetworkResult.Success) {
                     val allFines = result.data
-                    val totalPending = allFines.filter { it.status == MyFineStatus.PENDING }.sumOf { it.amountValue }
+                    val calculatedPending = allFines.filter { it.status == MyFineStatus.PENDING }.sumOf { it.amountValue }
+                    
                     val currentSummary = serverSummary ?: buildSummaryFromCache()
                     
+                    // Take max of calculated and what server says to match dashboard/fines logic
+                    val finalPending = maxOf(calculatedPending, currentSummary.pendingFineValue)
+                    
                     val updatedSummary = currentSummary.copy(
-                        pendingFine = formatCurrency(totalPending),
-                        pendingFineValue = totalPending
+                        pendingFine = formatCurrency(finalPending),
+                        pendingFineValue = finalPending
                     )
                     serverSummary = updatedSummary
                     _summaryState.value = NetworkResult.Success(updatedSummary)
@@ -201,7 +205,7 @@ class StudentMyBooksViewModel(
         // and whichever value is larger for fine amount
         // Use maxOf for fine value to ensure it includes both book-specific fines and general fines
         val finalFineValue = maxOf(built.pendingFineValue, summary.pendingFineValue)
-        val finalFineString = if (finalFineValue == built.pendingFineValue) built.pendingFine else summary.pendingFine
+        val finalFineString = formatCurrency(finalFineValue)
 
         val merged = built.copy(
             totalIssued = maxOf(summary.totalIssued, built.totalIssued),

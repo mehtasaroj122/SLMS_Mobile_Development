@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.saroj.lmsmobile.data.models.common.NetworkResult
+import com.saroj.lmsmobile.data.models.studentdashboard.DashboardStats
 import com.saroj.lmsmobile.data.models.studentdashboard.StudentDashboardResponse
 import com.saroj.lmsmobile.data.repository.StudentDashboardRepository
 import com.saroj.lmsmobile.data.repository.StudentMyFinesRepository
@@ -46,11 +47,37 @@ class StudentDashboardViewModel(
             repository.getStudentDashboard()
                 .combine(finesRepository.getAllFines()) { dashboardResult, finesResult ->
                     if (dashboardResult is NetworkResult.Success && finesResult is NetworkResult.Success) {
-                        val totalPendingFine = finesResult.data
+                        val calculatedPendingFine = finesResult.data
                             .filter { it.status == MyFineStatus.PENDING }
                             .sumOf { it.amountValue }
-                        val updatedStats = dashboardResult.data.stats?.copy(pending_fines = totalPendingFine)
-                        NetworkResult.Success(dashboardResult.data.copy(stats = updatedStats))
+
+                        // Take the larger of the two (calculated vs server) to match the Fine page logic
+                        val serverPendingFine = dashboardResult.data.stats?.pending_fines
+                            ?: dashboardResult.data.data?.stats?.pending_fines
+                            ?: 0.0
+                        val finalPendingFine = maxOf(calculatedPendingFine, serverPendingFine)
+
+                        val updatedStats = dashboardResult.data.stats?.copy(pending_fines = finalPendingFine)
+                            ?: DashboardStats(
+                                issued_books = null,
+                                returned_books = null,
+                                pending_fines = finalPendingFine,
+                                active_requests = null,
+                                total_requests = null,
+                                approved_requests = null,
+                                rejected_requests = null
+                            )
+
+                        val updatedData = dashboardResult.data.data?.let { d ->
+                            d.copy(stats = d.stats?.copy(pending_fines = finalPendingFine) ?: updatedStats)
+                        }
+
+                        NetworkResult.Success(
+                            dashboardResult.data.copy(
+                                stats = updatedStats,
+                                data = updatedData
+                            )
+                        )
                     } else {
                         dashboardResult
                     }

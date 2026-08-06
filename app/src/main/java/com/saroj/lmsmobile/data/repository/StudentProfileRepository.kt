@@ -318,7 +318,15 @@ class StudentProfileRepository(
     }
 
     private suspend fun <T> handleError(response: Response<*>): NetworkResult<T> {
-        val message = parseErrorMessage(response)
+        val rawError = runCatching { response.errorBody()?.string() }.getOrNull()
+        val parsed = if (rawError != null) runCatching { gson.fromJson(rawError, ErrorResponse::class.java) }.getOrNull() else null
+        
+        val firstValidationError = parsed?.errors?.values?.firstOrNull()?.firstOrNull()
+        val message = firstValidationError
+            ?: parsed?.message?.takeIf { it.isNotBlank() }
+            ?: rawError?.take(160)
+            ?: response.message().ifBlank { Constants.ERROR_UNKNOWN }
+
         return when (response.code()) {
             Constants.HTTP_UNAUTHORIZED -> {
                 tokenManager.clearAllData()
@@ -326,8 +334,12 @@ class StudentProfileRepository(
             }
             Constants.HTTP_FORBIDDEN -> NetworkResult.Error(Constants.ERROR_FORBIDDEN, response.code())
             Constants.HTTP_NOT_FOUND -> NetworkResult.Error(Constants.ERROR_NOT_FOUND, response.code())
-            Constants.HTTP_UNPROCESSABLE_ENTITY -> NetworkResult.Error(message.ifBlank { Constants.ERROR_VALIDATION }, response.code())
-            else -> NetworkResult.Error(message, response.code())
+            Constants.HTTP_UNPROCESSABLE_ENTITY -> NetworkResult.Error(
+                message.ifBlank { Constants.ERROR_VALIDATION },
+                response.code(),
+                parsed?.errors
+            )
+            else -> NetworkResult.Error(message, response.code(), parsed?.errors)
         }
     }
 

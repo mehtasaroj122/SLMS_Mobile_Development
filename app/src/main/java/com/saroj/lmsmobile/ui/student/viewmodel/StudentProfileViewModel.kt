@@ -50,7 +50,7 @@ class StudentProfileViewModel(
                         _profileActionState.value = NetworkResult.Success("Profile updated successfully")
                         NotificationRefreshBus.requestRefresh()
                     }
-                    is NetworkResult.Error -> _profileActionState.value = NetworkResult.Error(result.message, result.code)
+                    is NetworkResult.Error -> _profileActionState.value = NetworkResult.Error(result.message, result.code, result.errors)
                     is NetworkResult.Unauthorized -> _profileActionState.value = NetworkResult.Unauthorized()
                 }
             }
@@ -79,7 +79,7 @@ class StudentProfileViewModel(
                         _profileActionState.value = NetworkResult.Success("Profile photo uploaded successfully")
                         NotificationRefreshBus.requestRefresh()
                     }
-                    is NetworkResult.Error -> _profileActionState.value = NetworkResult.Error(result.message, result.code)
+                    is NetworkResult.Error -> _profileActionState.value = NetworkResult.Error(result.message, result.code, result.errors)
                     is NetworkResult.Unauthorized -> _profileActionState.value = NetworkResult.Unauthorized()
                 }
             }
@@ -98,7 +98,7 @@ class StudentProfileViewModel(
                         _profileActionState.value = NetworkResult.Success("Profile photo removed")
                         NotificationRefreshBus.requestRefresh()
                     }
-                    is NetworkResult.Error -> _profileActionState.value = NetworkResult.Error(result.message, result.code)
+                    is NetworkResult.Error -> _profileActionState.value = NetworkResult.Error(result.message, result.code, result.errors)
                     is NetworkResult.Unauthorized -> _profileActionState.value = NetworkResult.Unauthorized()
                 }
             }

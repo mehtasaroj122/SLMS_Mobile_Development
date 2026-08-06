@@ -167,13 +167,22 @@ class StudentMyFinesViewModel(
         val overdueBooks = cacheSummary?.overdueBooks?.coerceAtLeast(summary.overdueBooks)
             ?: summary.overdueBooks
         
-        // Also use cache summary for paid and waived totals if they are larger (ensure consistency with the list)
-        val finalPaidStr = cacheSummary?.paidAmount ?: summary.paidAmount
-        val finalWaivedStr = cacheSummary?.waivedAmount ?: summary.waivedAmount
-        val finalPaidVal = cacheSummary?.paidAmountValue ?: summary.paidAmountValue
-        val finalWaivedVal = cacheSummary?.waivedAmountValue ?: summary.waivedAmountValue
-        val finalPaidCount = cacheSummary?.paidCount ?: summary.paidCount
-        val finalWaivedCount = cacheSummary?.waivedCount ?: summary.waivedCount
+        // Use the larger of the two (calculated from list vs server summary) for all stats
+        val finalPaidVal = maxOf(cacheSummary?.paidAmountValue ?: 0.0, summary.paidAmountValue)
+        val finalPaidCount = maxOf(cacheSummary?.paidCount ?: 0, summary.paidCount)
+        val finalPaidStr = if (cacheSummary != null && cacheSummary.paidAmountValue > summary.paidAmountValue) {
+            cacheSummary.paidAmount 
+        } else {
+            summary.paidAmount
+        }
+
+        val finalWaivedVal = maxOf(cacheSummary?.waivedAmountValue ?: 0.0, summary.waivedAmountValue)
+        val finalWaivedCount = maxOf(cacheSummary?.waivedCount ?: 0, summary.waivedCount)
+        val finalWaivedStr = if (cacheSummary != null && cacheSummary.waivedAmountValue > summary.waivedAmountValue) {
+            cacheSummary.waivedAmount
+        } else {
+            summary.waivedAmount
+        }
 
         _summaryState.value = NetworkResult.Success(summary.copy(
             outstandingAmount = totalOutstandingStr,

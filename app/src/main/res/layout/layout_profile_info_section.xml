@@ -131,6 +131,15 @@
         android:textSize="14sp" />
 
     <TextView
+        android:id="@+id/errorProfileFullName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:textColor="@color/profile_red"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="14dp"
@@ -151,6 +160,15 @@
         android:singleLine="true"
         android:textColor="@color/profile_text_primary"
         android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/errorProfileEmail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:textColor="@color/profile_red"
+        android:textSize="12sp"
+        android:visibility="gone" />
 
     <TextView
         android:layout_width="match_parent"
@@ -181,6 +199,15 @@
         android:singleLine="true"
         android:textColor="@color/profile_text_primary"
         android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/errorProfilePhone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:textColor="@color/profile_red"
+        android:textSize="12sp"
+        android:visibility="gone" />
 
     <TextView
         android:layout_width="match_parent"
